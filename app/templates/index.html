@@ -1,0 +1,47 @@
+# app/templates/index.html
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-white rounded-3 shadow-sm">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">Welcome to the Address Book</h1>
+        <p class="col-md-8 fs-4">Browse companies and individuals from the directory.</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Companies Column -->
+    <div class="col-md-6">
+        <h2>Companies</h2>
+        <div class="list-group shadow-sm">
+            {% if companies %}
+                {% for company in companies %}
+                <a href="{{ url_for('main.company_detail', b64_dn=company.dn|b64encode) }}" class="list-group-item list-group-item-action">
+                    {{ company.o or 'Unnamed Company' }}
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="list-group-item">No companies found.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Individuals Column -->
+    <div class="col-md-6">
+        <h2>Unassociated Individuals</h2>
+        <div class="list-group shadow-sm">
+            {% if people %}
+                {% for person in people %}
+                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="list-group-item list-group-item-action">
+                    {{ person.cn or 'Unnamed Person' }}
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="list-group-item">No unassociated people found.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

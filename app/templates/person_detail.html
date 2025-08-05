@@ -1,0 +1,40 @@
+# app/templates/person_detail.html
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+        <h1 class="my-2">{{ person.cn[0] if person.cn else 'Person Details' }}</h1>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Full Name</dt>
+            <dd class="col-sm-9">{{ person.cn[0] if person.cn else 'N/A' }}</dd>
+
+            <dt class="col-sm-3">Surname</dt>
+            <dd class="col-sm-9">{{ person.sn[0] if person.sn else 'N/A' }}</dd>
+
+            <dt class="col-sm-3">Given Name</dt>
+            <dd class="col-sm-9">{{ person.givenName[0] if person.givenName else 'N/A' }}</dd>
+            
+            <dt class="col-sm-3">Email</dt>
+            <dd class="col-sm-9">
+                {% if person.mail and person.mail[0] %}
+                    <a href="mailto:{{ person.mail[0] }}">{{ person.mail[0] }}</a>
+                {% else %}
+                    N/A
+                {% endif %}
+            </dd>
+
+            <dt class="col-sm-3">Phone</dt>
+            <dd class="col-sm-9">{{ person.telephoneNumber[0] if person.telephoneNumber else 'N/A' }}</dd>
+
+            <dt class="col-sm-3">Company</dt>
+            <dd class="col-sm-9">{{ person.o[0] if person.o else 'N/A' }}</dd>
+        </dl>
+    </div>
+</div>
+<a href="{{ url_for('main.index') }}" class="btn btn-secondary mt-3">Back to Address Book</a>
+{% endblock %}
+
+
