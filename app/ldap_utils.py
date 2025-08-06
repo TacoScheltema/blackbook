@@ -44,25 +44,37 @@ def search_ldap(filter_str, attributes, paged_size=20, paged_cookie=None):
     base_dn = current_app.config['LDAP_BASE_DN']
     
     try:
-        total_entries, all_entries, result, paged_cookie = conn.search(
+        # The conn.search method returns a boolean.
+        # The results and cookie are retrieved from the connection object afterward.
+        search_was_sent = conn.search(
             search_base=base_dn,
             search_filter=filter_str,
             attributes=attributes,
             paged_size=paged_size,
             paged_cookie=paged_cookie
         )
-        
+
+        if not search_was_sent:
+            print(f"LDAP Search returned False. Result: {conn.result}")
+            flash('The search could not be performed.', 'warning')
+            return [], None
+
         results = []
-        for entry in all_entries:
-            # Using entry.entry_raw_attributes to handle multi-valued attributes correctly
+        for entry in conn.entries:
             result_dict = {'dn': entry.entry_dn}
+            # Use entry_raw_attributes for consistency and to avoid decoding issues here
+            raw_attrs = entry.entry_raw_attributes
             for attr in attributes:
-                # Get the first value if it exists, otherwise None
-                raw_values = entry.entry_raw_attributes.get(attr, [])
-                result_dict[attr] = raw_values[0].decode('utf-8') if raw_values else None
+                # Get the first value if it exists, decode from bytes, otherwise None
+                raw_values = raw_attrs.get(attr, [])
+                result_dict[attr] = raw_values[0].decode('utf-8', 'ignore') if raw_values else None
             results.append(result_dict)
-            
-        return results, paged_cookie
+        
+        # Correctly retrieve the cookie for the next page from the paged results control
+        paged_control = conn.result['controls'].get('1.2.840.113556.1.4.319', {})
+        next_cookie = paged_control.get('value', {}).get('cookie')
+
+        return results, next_cookie
         
     except (LDAPInvalidFilterError, LDAPOperationsErrorResult) as e:
         print(f"LDAP search failed due to invalid filter or operation: {e}")
@@ -179,3 +191,4 @@ def modify_ldap_entry(dn, changes):
     finally:
         if conn:
             conn.unbind()
+
