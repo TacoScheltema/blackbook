@@ -135,3 +135,35 @@ def add_ldap_entry(dn, object_classes, attributes):
     finally:
         if conn:
             conn.unbind()
+
+def modify_ldap_entry(dn, changes):
+    """
+    Modifies an existing entry in the LDAP directory.
+
+    :param dn: The Distinguished Name (DN) of the entry to modify.
+    :param changes: A dictionary of changes.
+                    Format: {'attribute_name': [(MODIFY_TYPE, [values])]}
+                    Example: {'mail': [(ldap3.MODIFY_REPLACE, ['new@example.com'])]}
+    :return: True if successful, False otherwise.
+    """
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+        
+    try:
+        success = conn.modify(dn, changes)
+        if not success:
+            print(f"LDAP Modify Failed: {conn.result}")
+            if isinstance(conn.result.get('description'), str):
+                flash(f"Could not modify entry: {conn.result['description']}", 'danger')
+            else:
+                flash("An unknown error occurred while modifying the entry.", 'danger')
+            return False
+        return True
+    except LDAPException as e:
+        print(f"LDAP modify operation failed: {e}")
+        flash('A critical error occurred during the LDAP modify operation.', 'danger')
+        return False
+    finally:
+        if conn:
+            conn.unbind()
