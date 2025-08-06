@@ -2,7 +2,7 @@
 import base64
 from flask import render_template, current_app, abort, request
 from app.main import bp
-from app.ldap_utils import search_ldap, get_entry_by_dn
+from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry
 
 # Define attributes to fetch for people and companies
 PERSON_ATTRS = ['cn', 'sn', 'givenName', 'mail', 'telephoneNumber', 'o']
@@ -27,7 +27,7 @@ def index():
     # This finds people not linked to any company.
     people_filter = f'(& (objectClass={person_class}) (!({company_link_attr}=*)) )'
     people = search_ldap(people_filter, PERSON_ATTRS)
-    
+
     return render_template('index.html', title='Address Book', companies=companies, people=people)
 
 @bp.route('/company/<b64_dn>')
