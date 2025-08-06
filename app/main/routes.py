@@ -6,6 +6,7 @@ from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_
 
 PERSON_ATTRS = ['cn', 'sn', 'givenName', 'mail', 'telephoneNumber', 'o']
 COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode']
+PAGE_SIZE = 25
 
 def get_config(key):
     """Helper to safely get config values."""
@@ -13,18 +14,35 @@ def get_config(key):
 
 @bp.route('/')
 def index():
-    """Main index page. Lists all companies and unassociated individuals."""
+    """Main index page. Lists all companies and a paginated list of all persons."""
+    # --- Companies List (remains the same) ---
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
-    person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
-    company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
-
     company_filter = f'(objectClass={company_class})'
-    companies = search_ldap(company_filter, ['o']) # Only need names for the list
+    companies, _ = search_ldap(company_filter, ['o'], paged_size=200) # Get a good number of companies
 
-    people_filter = f'(& (objectClass={person_class}) (!({company_link_attr}=*)) )'
-    people = search_ldap(people_filter, PERSON_ATTRS)
+    # --- Persons List (paginated and searchable) ---
+    search_query = request.args.get('q', '')
+    cookie = request.args.get('cookie')
+
+    person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
     
-    return render_template('index.html', title='Address Book', companies=companies, people=people)
+    if search_query:
+        # Search across common name, surname, and given name
+        search_filter = f"(&(objectClass={person_class})(|(cn=*{search_query}*)(sn=*{search_query}*)(givenName=*{search_query}*)))"
+    else:
+        # Default view: all persons
+        search_filter = f"(objectClass={person_class})"
+
+    people, next_cookie = search_ldap(search_filter, PERSON_ATTRS, paged_size=PAGE_SIZE, paged_cookie=cookie)
+
+    return render_template('index.html', 
+                           title='Address Book', 
+                           companies=companies, 
+                           people=people,
+                           search_query=search_query,
+                           next_cookie=next_cookie,
+                           cookie=cookie)
+
 
 @bp.route('/company/add', methods=['GET', 'POST'])
 def add_company():
@@ -78,7 +96,7 @@ def company_detail(b64_dn):
         person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
         company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
         employee_filter = f'(& (objectClass={person_class}) ({company_link_attr}={company_name}) )'
-        employees = search_ldap(employee_filter, PERSON_ATTRS)
+        employees, _ = search_ldap(employee_filter, PERSON_ATTRS, paged_size=200)
 
     return render_template('company_detail.html', title=company_name, company=company, employees=employees)
 
@@ -117,8 +135,6 @@ def edit_person(b64_dn):
         }
 
         for attr, value in form_data.items():
-            # If the value is empty, we delete the attribute.
-            # Otherwise, we replace it.
             if not value:
                 changes[attr] = [(ldap3.MODIFY_DELETE, [])]
             else:
@@ -136,10 +152,9 @@ def edit_person(b64_dn):
     if not person:
         abort(404)
 
-    # Get all companies for the dropdown
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_filter = f'(objectClass={company_class})'
-    companies = search_ldap(company_filter, ['o'])
+    companies, _ = search_ldap(company_filter, ['o'], paged_size=200)
 
     person_name = person.get('cn', ['Unknown'])[0]
     return render_template('edit_person.html', title=f"Edit {person_name}", person=person, companies=companies, b64_dn=b64_dn)
