@@ -11,6 +11,9 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">LDAP Address Book</a>
+            <div class="ms-auto">
+                {% block navbar_buttons %}{% endblock %}
+            </div>
         </div>
     </nav>
 
@@ -29,7 +32,6 @@
         {% block content %}{% endblock %}
     </main>
 
-
     <footer class="text-center text-muted py-4 mt-4">
         <p>&copy; 2025 LDAP Address Book</p>
     </footer>
@@ -42,3 +44,4 @@
     </script>
 </body>
 </html>
+
