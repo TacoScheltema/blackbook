@@ -18,30 +18,44 @@ def index():
     # --- Companies List (remains the same) ---
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_filter = f'(objectClass={company_class})'
-    companies, _ = search_ldap(company_filter, ['o'], paged_size=200) # Get a good number of companies
+    companies, _ = search_ldap(company_filter, ['o'], paged_size=200)
 
     # --- Persons List (paginated and searchable) ---
     search_query = request.args.get('q', '')
-    cookie = request.args.get('cookie')
+    
+    # Get the URL-safe cookie string from the request args
+    encoded_cookie = request.args.get('cookie')
+    paged_cookie_bytes = None
+    if encoded_cookie:
+        try:
+            # Decode the string back into bytes for the ldap3 library
+            paged_cookie_bytes = base64.urlsafe_b64decode(encoded_cookie)
+        except (base64.binascii.Error, UnicodeDecodeError):
+            flash('Invalid pagination data received.', 'warning')
+            return redirect(url_for('main.index'))
 
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
     
     if search_query:
-        # Search across common name, surname, and given name
         search_filter = f"(&(objectClass={person_class})(|(cn=*{search_query}*)(sn=*{search_query}*)(givenName=*{search_query}*)))"
     else:
-        # Default view: all persons
         search_filter = f"(objectClass={person_class})"
 
-    people, next_cookie = search_ldap(search_filter, PERSON_ATTRS, paged_size=PAGE_SIZE, paged_cookie=cookie)
+    # Pass the decoded bytes cookie to the search function
+    people, next_cookie_bytes = search_ldap(search_filter, PERSON_ATTRS, paged_size=PAGE_SIZE, paged_cookie=paged_cookie_bytes)
+
+    # Encode the next cookie (if it exists) into a URL-safe string for the template
+    next_encoded_cookie = None
+    if next_cookie_bytes:
+        next_encoded_cookie = base64.urlsafe_b64encode(next_cookie_bytes).decode('utf-8')
 
     return render_template('index.html', 
                            title='Address Book', 
                            companies=companies, 
                            people=people,
                            search_query=search_query,
-                           next_cookie=next_cookie,
-                           cookie=cookie)
+                           next_cookie=next_encoded_cookie,
+                           cookie=encoded_cookie)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
