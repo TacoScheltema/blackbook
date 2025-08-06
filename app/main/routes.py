@@ -1,6 +1,6 @@
 # app/main/routes.py
 import base64
-from flask import render_template, current_app, abort, request
+from flask import render_template, current_app, abort, request, flash
 from app.main import bp
 from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry
 
