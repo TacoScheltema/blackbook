@@ -1,10 +1,11 @@
-# app/templates/person_detail.html
+
 {% extends "base.html" %}
 
 {% block content %}
 <div class="card shadow-sm">
-    <div class="card-header bg-dark text-white">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h1 class="my-2">{{ person.cn[0] if person.cn else 'Person Details' }}</h1>
+        <a href="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" class="btn btn-light btn-sm">Edit</a>
     </div>
     <div class="card-body">
         <dl class="row">
@@ -16,7 +17,7 @@
 
             <dt class="col-sm-3">Given Name</dt>
             <dd class="col-sm-9">{{ person.givenName[0] if person.givenName else 'N/A' }}</dd>
-            
+
             <dt class="col-sm-3">Email</dt>
             <dd class="col-sm-9">
                 {% if person.mail and person.mail[0] %}
@@ -34,7 +35,9 @@
         </dl>
     </div>
 </div>
-<a href="{{ url_for('main.index') }}" class="btn btn-secondary mt-3">Back to Address Book</a>
+<a href="{{ url_for('main.index') }}" class="btn btn-secondary mt-3" data-bs-toggle="tooltip" data-bs-placement="top" title="Back to Address Book">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-book" viewBox="0 0 16 16">
+        <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.887 3.112-.752 1.234.124 2.503.523 3.388.893v9.823c-.908-.349-2.107-.652-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015 1.232 5.587.81 4.5.77c-1.255-.04-2.51.196-3.5.571V14.5c.99-.375 2.245-.64 3.5-.57 1.255.07 2.486.42 3.5.97V1.783z"/>
+    </svg>
+</a>
 {% endblock %}
-
-
