@@ -1,7 +1,7 @@
 # app/ldap_utils.py
 import ldap3
 from ldap3.core.exceptions import LDAPException, LDAPInvalidDNSyntaxResult, LDAPEntryAlreadyExistsResult
-from flask import current_app, flash, request
+from flask import current_app, flash
 
 def get_ldap_connection():
     """
