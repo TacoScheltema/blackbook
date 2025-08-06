@@ -63,12 +63,51 @@ def person_detail(b64_dn):
         dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
-        
+
     person = get_entry_by_dn(dn, PERSON_ATTRS)
     if not person:
         abort(404)
-        
+
     person_name = person.get('cn', ['Unknown'])[0]
     return render_template('person_detail.html', title=person_name, person=person)
 
+@bp.route('/company/add', methods=['GET', 'POST'])
+def add_company():
+    """Handles creation of a new company entry."""
+    if request.method == 'POST':
+        company_name = request.form.get('company_name')
+        if not company_name:
+            flash('Company Name is a required field.', 'warning')
+            return redirect(url_for('main.add_company'))
 
+        # Construct the DN for the new company
+        base_dn = get_config('LDAP_BASE_DN')
+        # A common convention is to use 'ou=Companies' or similar
+        # For simplicity, we'll add it directly under the base DN.
+        # You might want to place companies in a specific OU (Organizational Unit).
+        new_dn = f"o={company_name},{base_dn}"
+
+        object_classes = ['top', 'organization']
+
+        # Collect attributes from the form
+        attributes = {
+            'o': company_name,
+            'description': request.form.get('description'),
+            'street': request.form.get('street'),
+            'l': request.form.get('city'),
+            'st': request.form.get('state'),
+            'postalCode': request.form.get('postal_code')
+        }
+        # Filter out empty attributes
+        attributes = {k: v for k, v in attributes.items() if v}
+
+        if add_ldap_entry(new_dn, object_classes, attributes):
+            flash(f'Company "{company_name}" added successfully!', 'success')
+            # Encode the new DN to redirect to its detail page
+            b64_dn = base64.urlsafe_b64encode(new_dn.encode('utf-8')).decode('utf-8')
+            return redirect(url_for('main.company_detail', b64_dn=b64_dn))
+        else:
+            # The error is flashed from within add_ldap_entry
+            return redirect(url_for('main.add_company'))
+
+    return render_template('add_company.html', title='Add New Company')

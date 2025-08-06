@@ -34,3 +34,4 @@ def create_app(config_class=Config):
             """, 500
 
     return app
+

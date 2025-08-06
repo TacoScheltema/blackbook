@@ -11,9 +11,15 @@
 
 <div class="row">
     <!-- Companies Column -->
+    <!-- Companies Column -->
     <div class="col-md-6">
-        <h2>Companies</h2>
-        <div class="list-group shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Companies</h2>
+            <a href="{{ url_for('main.add_company') }}" class="btn btn-primary">
+                + Add Company
+            </a>
+        </div>
+            <div class="list-group shadow-sm">
             {% if companies %}
                 {% for company in companies %}
                 <a href="{{ url_for('main.company_detail', b64_dn=company.dn|b64encode) }}" class="list-group-item list-group-item-action">
