@@ -48,13 +48,20 @@ def search_ldap(filter_str, attributes, paged_size=None, paged_cookie=None):
 
     try:
         if paged_size:
-            generator = conn.extend.standard.paged_search(
-                search_base=base_dn,
-                search_filter=filter_str,
-                attributes=attributes,
-                paged_size=paged_size,
-                paged_cookie=paged_cookie
-            )
+            # Build the keyword arguments for the paged search.
+            # This prevents the TypeError by only including the paged_cookie
+            # argument when it actually has a value.
+            paged_search_kwargs = {
+                'search_base': base_dn,
+                'search_filter': filter_str,
+                'attributes': attributes,
+                'paged_size': paged_size
+            }
+            if paged_cookie:
+                paged_search_kwargs['paged_cookie'] = paged_cookie
+
+            generator = conn.extend.standard.paged_search(**paged_search_kwargs)
+
             for entry in generator:
                 if entry['type'] == 'searchResEntry':
                     result_dict = {'dn': entry['dn']}
@@ -64,9 +71,12 @@ def search_ldap(filter_str, attributes, paged_size=None, paged_cookie=None):
                         else:
                            result_dict[attr] = None
                     results.append(result_dict)
+
+            # The cookie for the next page is in the result of the generator
             next_cookie = conn.result.get('cookie')
             return results, next_cookie
         else:
+            # Use simple search for non-paginated results
             conn.search(
                 search_base=base_dn,
                 search_filter=filter_str,
