@@ -1,5 +1,7 @@
 import ldap3
-from ldap3.core.exceptions import LDAPException, LDAPInvalidDnError, LDAPEntryAlreadyExistsError, LDAPNoSuchAttributeError
+## We only import the base LDAPException. Specific operational exceptions
+## are accessed as attributes of the ldap3 module itself (e.g., ldap3.LDAPEntryAlreadyExistsError).
+from ldap3.core.exceptions import LDAPException
 from flask import current_app, flash
 
 def get_ldap_connection():
@@ -20,7 +22,7 @@ def get_ldap_connection():
             password=current_app.config['LDAP_BIND_PASSWORD'],
             auto_bind=True,
             read_only=False,
-            # This makes ldap3 raise exceptions instead of returning False
+            # This makes ldap3 use the modern try...except error handling pattern.
             raise_exceptions=True
         )
         return connection
@@ -33,13 +35,12 @@ def search_ldap(filter_str, attributes, paged_size=None, paged_cookie=None):
     """
     Performs a search on the LDAP directory, with optional pagination.
     """
-    # This function's error handling remains as is, since search does not raise exceptions
-    # in the same way as add/modify by default, even with raise_exceptions=True.
     conn = get_ldap_connection()
     if not conn:
         return [], None
 
-    # Temporarily disable exception raising for search operations to handle them gracefully
+    # We temporarily disable exception raising for searches to gracefully handle
+    # cases where a search returns no results, which is not an exceptional state.
     conn.raise_exceptions = False
 
     base_dn = current_app.config['LDAP_BASE_DN']
@@ -94,7 +95,6 @@ def get_entry_by_dn(dn, attributes):
     if not conn:
         return None
 
-    # Temporarily disable exception raising for this read operation
     conn.raise_exceptions = False
 
     try:
@@ -130,11 +130,11 @@ def add_ldap_entry(dn, object_classes, attributes):
     try:
         conn.add(dn, object_class=object_classes, attributes=attributes)
         return True
-    except LDAPEntryAlreadyExistsError:
+    except ldap3.LDAPEntryAlreadyExistsError:
         flash(f"An entry with DN '{dn}' already exists.", 'danger')
         return False
-    except LDAPInvalidDnError:
-        flash(f"The generated DN '{dn}' is invalid. Check your Base DN and company name.", 'danger')
+    except ldap3.LDAPInvalidDnError:
+        flash(f"The generated DN '{dn}' is invalid. Check your Base DN and the entry name.", 'danger')
         return False
     except LDAPException as e:
         print(f"LDAP add operation failed: {e}")
@@ -146,7 +146,7 @@ def add_ldap_entry(dn, object_classes, attributes):
 
 def modify_ldap_entry(dn, changes):
     """
-    Modifies an existing entry, catching specific exceptions like noSuchAttribute.
+    Modifies an existing entry, catching specific exceptions for clear feedback.
     """
     conn = get_ldap_connection()
     if not conn:
@@ -155,11 +155,14 @@ def modify_ldap_entry(dn, changes):
     try:
         conn.modify(dn, changes)
         return True
-    except LDAPNoSuchAttributeError as e:
+    except ldap3.LDAPNoSuchAttributeError as e:
+        # This is the specific error you were seeing.
+        # The exception 'e' itself contains the useful message.
         print(f"LDAP Modify Failed with NoSuchAttribute: {e}")
-        flash(f"Could not modify entry: An attribute in the form does not exist on the server. Details: {e}", 'danger')
+        flash(f"Could not modify entry. The server reports a missing attribute. Details: {e}", 'danger')
         return False
     except LDAPException as e:
+        # Catch any other LDAP-related errors.
         print(f"LDAP modify operation failed: {e}")
         flash(f"A critical error occurred during the LDAP modify operation: {e}", 'danger')
         return False
