@@ -21,7 +21,7 @@ def index():
 
     # --- Persons List (with new pagination logic) ---
     search_query = request.args.get('q', '')
-
+    
     # Get page size from request, default to 20. Ensure it's a valid choice.
     try:
         page_size = int(request.args.get('page_size', 20))
@@ -29,7 +29,7 @@ def index():
             page_size = 20
     except ValueError:
         page_size = 20
-
+        
     # Get current page number, default to 1.
     try:
         page = int(request.args.get('page', 1))
@@ -38,7 +38,7 @@ def index():
 
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
     person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
-
+    
     if search_query:
         search_filter = f"(&(objectClass={person_class})(|(cn=*{search_query}*)(sn=*{search_query}*)(givenName=*{search_query}*)))"
     else:
@@ -47,12 +47,12 @@ def index():
     # Fetch ALL people matching the filter.
     all_people = search_ldap(search_filter, person_attrs)
     total_people = len(all_people)
-
+    
     # Calculate pagination values
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
     people_on_page = all_people[start_index:end_index]
-
+    
     total_pages = math.ceil(total_people / page_size)
 
     # --- Generate the list of page numbers for the navigation ---
@@ -60,7 +60,7 @@ def index():
     PAGES_TO_SHOW = 6
     start_page = max(1, page - (PAGES_TO_SHOW // 2))
     end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
-
+    
     # Adjust start_page if we are near the end
     if end_page - start_page + 1 < PAGES_TO_SHOW:
         start_page = max(1, end_page - PAGES_TO_SHOW + 1)
@@ -91,7 +91,7 @@ def add_company():
         base_dn = get_config('LDAP_BASE_DN')
         new_dn = f"o={company_name},{base_dn}"
         object_classes = ['top', 'organization']
-
+        
         attributes = {
             'o': company_name,
             'description': request.form.get('description'),
@@ -144,12 +144,12 @@ def person_detail(b64_dn):
         dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
-
+        
     person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
     person = get_entry_by_dn(dn, person_attrs)
     if not person:
         abort(404)
-
+        
     person_name = person.get('cn', ['Unknown'])[0]
     return render_template('person_detail.html', title=person_name, person=person, b64_dn=b64_dn)
 
@@ -184,7 +184,7 @@ def edit_person(b64_dn):
             flash('No changes were submitted.', 'info')
         elif modify_ldap_entry(dn, changes):
             flash('Person details updated successfully!', 'success')
-
+        
         return redirect(url_for('main.person_detail', b64_dn=b64_dn))
 
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
