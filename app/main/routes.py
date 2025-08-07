@@ -22,7 +22,7 @@ def index():
 
     # --- Persons List (paginated and searchable) ---
     search_query = request.args.get('q', '')
-    
+
     # Get the URL-safe cookie string from the request args
     encoded_cookie = request.args.get('cookie')
     paged_cookie_bytes = None
@@ -35,7 +35,7 @@ def index():
             return redirect(url_for('main.index'))
 
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
-    
+
     if search_query:
         search_filter = f"(&(objectClass={person_class})(|(cn=*{search_query}*)(sn=*{search_query}*)(givenName=*{search_query}*)))"
     else:
@@ -70,7 +70,7 @@ def add_company():
         base_dn = get_config('LDAP_BASE_DN')
         new_dn = f"o={company_name},{base_dn}"
         object_classes = ['top', 'organization']
-        
+
         attributes = {
             'o': company_name,
             'description': request.form.get('description'),
@@ -121,11 +121,11 @@ def person_detail(b64_dn):
         dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
-        
+
     person = get_entry_by_dn(dn, PERSON_ATTRS)
     if not person:
         abort(404)
-        
+
     person_name = person.get('cn', ['Unknown'])[0]
     return render_template('person_detail.html', title=person_name, person=person, b64_dn=b64_dn)
 
@@ -135,6 +135,11 @@ def edit_person(b64_dn):
     try:
         dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
     except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    # For both GET and POST, we need the current state of the person.
+    current_person = get_entry_by_dn(dn, PERSON_ATTRS)
+    if not current_person:
         abort(404)
 
     if request.method == 'POST':
@@ -148,29 +153,34 @@ def edit_person(b64_dn):
             'o': request.form.get('company')
         }
 
-        for attr, value in form_data.items():
-            if not value:
+        for attr, form_value in form_data.items():
+            # Check if the attribute currently exists on the user entry.
+            attr_exists = current_person.get(attr)
+
+            if form_value:
+                # If the form has a value, we always want to set/replace it.
+                # MODIFY_REPLACE works for both adding a new attribute and modifying an existing one.
+                changes[attr] = [(ldap3.MODIFY_REPLACE, [form_value])]
+            elif not form_value and attr_exists:
+                # If the form value is empty AND the attribute exists on the LDAP entry, delete it.
                 changes[attr] = [(ldap3.MODIFY_DELETE, [])]
-            else:
-                changes[attr] = [(ldap3.MODIFY_REPLACE, [value])]
-        
-        if modify_ldap_entry(dn, changes):
+            # If the form value is empty and the attribute does not exist, we do nothing, preventing the error.
+
+        if not changes:
+            flash('No changes were submitted.', 'info')
+        elif modify_ldap_entry(dn, changes):
             flash('Person details updated successfully!', 'success')
-        else:
-            flash('Failed to update person details.', 'danger')
-        
+        # If modify_ldap_entry returns False, the error is flashed from within that function.
+
         return redirect(url_for('main.person_detail', b64_dn=b64_dn))
 
-    # For GET request
-    person = get_entry_by_dn(dn, PERSON_ATTRS)
-    if not person:
-        abort(404)
-
+    # For GET request, fetch company list for the dropdown.
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_filter = f'(objectClass={company_class})'
     companies, _ = search_ldap(company_filter, ['o'], paged_size=200)
 
-    person_name = person.get('cn', ['Unknown'])[0]
-    return render_template('edit_person.html', title=f"Edit {person_name}", person=person, companies=companies, b64_dn=b64_dn)
+    person_name = current_person.get('cn', ['Unknown'])[0]
+    return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, companies=companies, b64_dn=b64_dn)
+
 
 

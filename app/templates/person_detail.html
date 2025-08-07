@@ -29,7 +29,7 @@
 
             <dt class="col-sm-3">Given Name</dt>
             <dd class="col-sm-9">{{ person.givenName[0] if person.givenName else 'N/A' }}</dd>
-            
+
             <dt class="col-sm-3">Email</dt>
             <dd class="col-sm-9">
                 {% if person.mail and person.mail[0] %}
@@ -48,4 +48,5 @@
     </div>
 </div>
 {% endblock %}
+
 
