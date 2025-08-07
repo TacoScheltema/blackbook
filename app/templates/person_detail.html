@@ -21,17 +21,17 @@
     </div>
     <div class="card-body">
         <dl class="row">
-            {# This loop dynamically displays any attribute that has a value. #}
-            {% for attr, values in person.items() %}
-                {# Skip the DN, as it's not a user-friendly attribute to display. #}
-                {% if attr != 'dn' and values %}
-                    <dt class="col-sm-3 text-capitalize">{{ attr.replace('telephoneNumber', 'Telephone') }}</dt>
+            {# This loop dynamically displays any attribute from the config map that has a value. #}
+            {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
+                {% if person.get(attr_name) %}
+                    <dt class="col-sm-3" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ attr_name }}">
+                        {{ display_name }}
+                    </dt>
                     <dd class="col-sm-9">
-                        {# If the attribute is 'mail', make it a clickable link. #}
-                        {% if attr == 'mail' and values[0] %}
+                        {% set values = person[attr_name] %}
+                        {% if attr_name == 'mail' and values[0] %}
                             <a href="mailto:{{ values[0] }}">{{ values[0] }}</a>
                         {% else %}
-                            {# Handle multi-valued attributes by joining them with a comma. #}
                             {{ values | join(', ') }}
                         {% endif %}
                     </dd>

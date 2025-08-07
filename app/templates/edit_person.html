@@ -8,14 +8,14 @@
     <div class="card-body">
         <form action="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" method="post">
             <div class="row">
-                {# Loop through the configured attributes to dynamically create the form. #}
-                {% for attr in config.LDAP_PERSON_ATTRIBUTES %}
+                {# Loop through the configured attribute map to dynamically create the form. #}
+                {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
                 <div class="col-md-6 mb-3">
-                    {# Create a user-friendly label from the attribute name. #}
-                    <label for="{{ attr }}" class="form-label text-capitalize">{{ attr.replace('telephoneNumber', 'Telephone') }}</label>
+                    <label for="{{ attr_name }}" class="form-label" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ attr_name }}">
+                        {{ display_name }}
+                    </label>
 
-                    {# Special handling for the company ('o') attribute to show a datalist. #}
-                    {% if attr == 'o' %}
+                    {% if attr_name == 'o' %}
                         <input class="form-control" list="company-options" id="o" name="o" value="{{ person.o[0] if person.o }}">
                         <datalist id="company-options">
                             {% for company in companies %}
@@ -23,11 +23,10 @@
                             {% endfor %}
                         </datalist>
                     {% else %}
-                        {# Determine input type based on attribute name for better UX. #}
                         {% set input_type = 'text' %}
-                        {% if attr == 'mail' %}{% set input_type = 'email' %}{% endif %}
-                        {% if attr == 'telephoneNumber' %}{% set input_type = 'tel' %}{% endif %}
-                        <input type="{{ input_type }}" class="form-control" id="{{ attr }}" name="{{ attr }}" value="{{ person[attr][0] if person[attr] }}">
+                        {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
+                        {% if attr_name == 'telephoneNumber' %}{% set input_type = 'tel' %}{% endif %}
+                        <input type="{{ input_type }}" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}" value="{{ person[attr_name][0] if person.get(attr_name) }}">
                     {% endif %}
                 </div>
                 {% endfor %}

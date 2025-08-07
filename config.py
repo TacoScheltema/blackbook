@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from collections import OrderedDict
 
 ## Load environment variables from a .env file
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -27,18 +28,39 @@ class Config:
     LDAP_COMPANY_LINK_ATTRIBUTE = os.environ.get('LDAP_COMPANY_LINK_ATTRIBUTE', 'o')
 
     # --- Attribute Configuration ---
-    # Attributes to fetch and display for a person.
-    # This is read from a comma-separated string in the .env file.
-    LDAP_PERSON_ATTRIBUTES_STR = os.environ.get('LDAP_PERSON_ATTRIBUTES')
-    if LDAP_PERSON_ATTRIBUTES_STR:
-        # If the variable is set, split it into a list
-        LDAP_PERSON_ATTRIBUTES = [attr.strip() for attr in LDAP_PERSON_ATTRIBUTES_STR.split(',')]
+    # A mapping of LDAP attribute names to human-readable display names.
+    # This is parsed from a string like "attr1:Name 1,attr2:Name 2"
+    LDAP_ATTRIBUTE_MAP_STR = os.environ.get('LDAP_ATTRIBUTE_MAP')
+    if LDAP_ATTRIBUTE_MAP_STR:
+        try:
+            # Use OrderedDict to preserve the order from the .env file.
+            LDAP_ATTRIBUTE_MAP = OrderedDict(
+                (pair.split(':')[0].strip(), pair.split(':')[1].strip())
+                for pair in LDAP_ATTRIBUTE_MAP_STR.split(',')
+            )
+        except IndexError:
+            # Handle malformed string by falling back to a default.
+            print("WARNING: LDAP_ATTRIBUTE_MAP is malformed. Using default.")
+            LDAP_ATTRIBUTE_MAP = OrderedDict()
     else:
-        # Otherwise, use a default list of common attributes.
-        LDAP_PERSON_ATTRIBUTES = [
-            'cn', 'givenName', 'sn', 'mail', 'telephoneNumber', 
-            'o', 'street', 'l', 'postalCode'
-        ]
+        LDAP_ATTRIBUTE_MAP = OrderedDict()
+
+    # If the map is empty (not set or malformed), use a default.
+    if not LDAP_ATTRIBUTE_MAP:
+        LDAP_ATTRIBUTE_MAP = OrderedDict([
+            ('cn', 'Full Name'),
+            ('givenName', 'Given Name'),
+            ('sn', 'Surname'),
+            ('mail', 'Email'),
+            ('telephoneNumber', 'Telephone'),
+            ('o', 'Company'),
+            ('street', 'Street'),
+            ('l', 'City'),
+            ('postalCode', 'Postal Code')
+        ])
+
+    # The attributes to fetch are the keys from our map.
+    LDAP_PERSON_ATTRIBUTES = list(LDAP_ATTRIBUTE_MAP.keys())
 
 
 

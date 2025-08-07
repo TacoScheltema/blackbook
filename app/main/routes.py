@@ -4,7 +4,7 @@ from flask import render_template, current_app, abort, request, flash, redirect,
 from app.main import bp
 from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
 
-## Removed hardcoded PERSON_ATTRS list. It will now be read from config.
+## Attribute lists are now read directly from config where needed.
 COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode']
 PAGE_SIZE = 25
 
@@ -147,6 +147,8 @@ def edit_person(b64_dn):
 
             if form_value is not None:
                 attr_exists = current_person.get(attr)
+
+                # Handle multi-valued attributes by only getting the first value for comparison
                 current_value = (attr_exists or [None])[0]
 
                 if form_value and form_value != current_value:
