@@ -8,40 +8,28 @@
     <div class="card-body">
         <form action="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" method="post">
             <div class="row">
+                {# Loop through the configured attribute map to dynamically create the form. #}
+                {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
                 <div class="col-md-6 mb-3">
-                    <label for="cn" class="form-label">Full Name (cn)</label>
-                    <input type="text" class="form-control" id="cn" name="cn" value="{{ person.cn[0] if person.cn }}" required>
+                    <label for="{{ attr_name }}" class="form-label" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ attr_name }}">
+                        {{ display_name }}
+                    </label>
+
+                    {% if attr_name == 'o' %}
+                        <input class="form-control" list="company-options" id="o" name="o" value="{{ person.o[0] if person.o }}">
+                        <datalist id="company-options">
+                            {% for company in companies %}
+                                <option value="{{ company.o }}">
+                            {% endfor %}
+                        </datalist>
+                    {% else %}
+                        {% set input_type = 'text' %}
+                        {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
+                        {% if attr_name == 'telephoneNumber' %}{% set input_type = 'tel' %}{% endif %}
+                        <input type="{{ input_type }}" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}" value="{{ person[attr_name][0] if person.get(attr_name) }}">
+                    {% endif %}
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label for="sn" class="form-label">Surname (sn)</label>
-                    <input type="text" class="form-control" id="sn" name="sn" value="{{ person.sn[0] if person.sn }}" required>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="givenName" class="form-label">Given Name</label>
-                    <input type="text" class="form-control" id="givenName" name="givenName" value="{{ person.givenName[0] if person.givenName }}">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label for="mail" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="mail" name="mail" value="{{ person.mail[0] if person.mail }}">
-                </div>
-            </div>
-             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="telephoneNumber" class="form-label">Telephone</label>
-                    <input type="tel" class="form-control" id="telephoneNumber" name="telephoneNumber" value="{{ person.telephoneNumber[0] if person.telephoneNumber }}">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label for="company" class="form-label">Company (o)</label>
-                    <input class="form-control" list="company-options" id="company" name="company" value="{{ person.o[0] if person.o }}">
-                    <datalist id="company-options">
-                        {% for company in companies %}
-                            <option value="{{ company.o }}">
-                        {% endfor %}
-                    </datalist>
-                    <div class="form-text">Select a company or type a new one. Leave blank to unassociate.</div>
-                </div>
+                {% endfor %}
             </div>
             <button type="submit" class="btn btn-primary">Save Changes</button>
             <a href="{{ url_for('main.person_detail', b64_dn=b64_dn) }}" class="btn btn-secondary">Cancel</a>
@@ -49,4 +37,5 @@
     </div>
 </div>
 {% endblock %}
+
 

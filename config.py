@@ -1,50 +1,66 @@
-# config.py
 import os
 from dotenv import load_dotenv
+from collections import OrderedDict
 
-# Load environment variables from a .env file
+## Load environment variables from a .env file
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
     """
     Main configuration class.
-    
+
     Loads settings from environment variables for security and flexibility.
     """
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'a-very-secret-key-that-you-should-change'
     FLASK_DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
 
     # --- LDAP Configuration ---
-    # The URL of your LDAP server (e.g., 'ldaps://ldap.example.com:636')
     LDAP_SERVER = os.environ.get('LDAP_SERVER')
-
-    # The Base DN (Distinguished Name) to use for searching.
-    # This is the starting point in the LDAP tree. e.g., 'dc=example,dc=com'
     LDAP_BASE_DN = os.environ.get('LDAP_BASE_DN')
-
-    # The DN for binding (authenticating) to the LDAP server.
-    # This user needs read access to the directory.
-    # e.g., 'cn=admin,dc=example,dc=com'
     LDAP_BIND_DN = os.environ.get('LDAP_BIND_DN')
-
-    # The password for the bind user.
     LDAP_BIND_PASSWORD = os.environ.get('LDAP_BIND_PASSWORD')
-    
-    # Set to True if your LDAP server uses SSL (e.g., for port 636)
     LDAP_USE_SSL = os.environ.get('LDAP_USE_SSL', 'False').lower() in ('true', '1', 't')
 
     # --- ObjectClass Configuration ---
-    # The objectClass used to identify a person in your LDAP schema.
-    # Common values are 'inetOrgPerson', 'person', or 'posixAccount'.
     LDAP_PERSON_OBJECT_CLASS = os.environ.get('LDAP_PERSON_OBJECT_CLASS', 'inetOrgPerson')
-
-    # The objectClass used to identify a company/organization.
-    # Common value is 'organization'.
     LDAP_COMPANY_OBJECT_CLASS = os.environ.get('LDAP_COMPANY_OBJECT_CLASS', 'organization')
-
-    # The attribute on a person's entry that links them to a company.
-    # This is typically 'o' (organizationName).
     LDAP_COMPANY_LINK_ATTRIBUTE = os.environ.get('LDAP_COMPANY_LINK_ATTRIBUTE', 'o')
+
+    # --- Attribute Configuration ---
+    # A mapping of LDAP attribute names to human-readable display names.
+    # This is parsed from a string like "attr1:Name 1,attr2:Name 2"
+    LDAP_ATTRIBUTE_MAP_STR = os.environ.get('LDAP_ATTRIBUTE_MAP')
+    if LDAP_ATTRIBUTE_MAP_STR:
+        try:
+            # Use OrderedDict to preserve the order from the .env file.
+            LDAP_ATTRIBUTE_MAP = OrderedDict(
+                (pair.split(':')[0].strip(), pair.split(':')[1].strip())
+                for pair in LDAP_ATTRIBUTE_MAP_STR.split(',')
+            )
+        except IndexError:
+            # Handle malformed string by falling back to a default.
+            print("WARNING: LDAP_ATTRIBUTE_MAP is malformed. Using default.")
+            LDAP_ATTRIBUTE_MAP = OrderedDict()
+    else:
+        LDAP_ATTRIBUTE_MAP = OrderedDict()
+
+    # If the map is empty (not set or malformed), use a default.
+    if not LDAP_ATTRIBUTE_MAP:
+        LDAP_ATTRIBUTE_MAP = OrderedDict([
+            ('cn', 'Full Name'),
+            ('givenName', 'Given Name'),
+            ('sn', 'Surname'),
+            ('mail', 'Email'),
+            ('telephoneNumber', 'Telephone'),
+            ('o', 'Company'),
+            ('street', 'Street'),
+            ('l', 'City'),
+            ('postalCode', 'Postal Code')
+        ])
+
+    # The attributes to fetch are the keys from our map.
+    LDAP_PERSON_ATTRIBUTES = list(LDAP_ATTRIBUTE_MAP.keys())
+
 
 

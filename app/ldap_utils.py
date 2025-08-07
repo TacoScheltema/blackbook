@@ -1,12 +1,12 @@
-# app/ldap_utils.py
 import ldap3
-from ldap3.core.exceptions import LDAPException, LDAPInvalidDNSyntaxResult, LDAPEntryAlreadyExistsResult
+## Only the base LDAPException is needed for connection errors.
+## Operational errors are handled by checking the connection result.
+from ldap3.core.exceptions import LDAPException
 from flask import current_app, flash
 
 def get_ldap_connection():
     """
     Establishes a connection to the LDAP server using settings from the app config.
-    The connection is NOT read-only to allow for add/modify operations.
     """
     try:
         use_ssl = current_app.config.get('LDAP_USE_SSL', False)
@@ -15,13 +15,14 @@ def get_ldap_connection():
             get_info=ldap3.ALL,
             use_ssl=use_ssl
         )
+        # CORRECTED: raise_exceptions is False by default, which is the correct
+        # pattern for checking conn.result after an operation.
         connection = ldap3.Connection(
             server,
             user=current_app.config['LDAP_BIND_DN'],
             password=current_app.config['LDAP_BIND_PASSWORD'],
             auto_bind=True,
-            # Changed from read_only=True to allow write operations
-            read_only=False 
+            read_only=False
         )
         return connection
     except LDAPException as e:
@@ -29,37 +30,59 @@ def get_ldap_connection():
         flash('Could not connect to the LDAP server.', 'danger')
         return None
 
-def search_ldap(filter_str, attributes):
+def search_ldap(filter_str, attributes, paged_size=None, paged_cookie=None):
     """
-    Performs a search on the LDAP directory.
-
-    :param filter_str: The LDAP search filter string.
-    :param attributes: A list of attributes to retrieve for each entry.
-    :return: A list of entry dictionaries or an empty list on error.
+    Performs a search on the LDAP directory, with optional pagination.
     """
     conn = get_ldap_connection()
     if not conn:
-        return []
+        return [], None
 
     base_dn = current_app.config['LDAP_BASE_DN']
+    results = []
 
     try:
-        conn.search(
-            search_base=base_dn,
-            search_filter=filter_str,
-            attributes=attributes
-        )
-        results = []
-        for entry in conn.entries:
-            result_dict = {'dn': entry.entry_dn}
-            for attr in attributes:
-                result_dict[attr] = entry[attr].value if entry[attr] else None
-            results.append(result_dict)
-        return results
+        if paged_size:
+            paged_search_kwargs = {
+                'search_base': base_dn,
+                'search_filter': filter_str,
+                'attributes': attributes,
+                'paged_size': paged_size
+            }
+            if paged_cookie:
+                paged_search_kwargs['paged_cookie'] = paged_cookie
+
+            generator = conn.extend.standard.paged_search(**paged_search_kwargs)
+
+            for entry in generator:
+                if entry['type'] == 'searchResEntry':
+                    result_dict = {'dn': entry['dn']}
+                    for attr in attributes:
+                        if attr in entry['attributes']:
+                           result_dict[attr] = entry['attributes'][attr][0] if len(entry['attributes'][attr]) == 1 else entry['attributes'][attr]
+                        else:
+                           result_dict[attr] = None
+                    results.append(result_dict)
+
+            next_cookie = conn.result.get('cookie')
+            return results, next_cookie
+        else:
+            conn.search(
+                search_base=base_dn,
+                search_filter=filter_str,
+                attributes=attributes
+            )
+            for entry in conn.entries:
+                result_dict = {'dn': entry.entry_dn}
+                for attr in attributes:
+                    result_dict[attr] = entry[attr].value if entry[attr] else None
+                results.append(result_dict)
+            return results, None
+
     except LDAPException as e:
         print(f"LDAP search failed: {e}")
         flash('An error occurred while searching the directory.', 'warning')
-        return []
+        return [], None
     finally:
         if conn:
             conn.unbind()
@@ -96,41 +119,28 @@ def get_entry_by_dn(dn, attributes):
 
 def add_ldap_entry(dn, object_classes, attributes):
     """
-    Adds a new entry to the LDAP directory.
-
-    :param dn: The Distinguished Name (DN) for the new entry.
-    :param object_classes: A list of object classes for the new entry.
-    :param attributes: A dictionary of attributes for the new entry.
-    :return: True if successful, False otherwise.
+    Adds a new entry to the LDAP directory by checking the operation result.
     """
     conn = get_ldap_connection()
     if not conn:
         return False
 
     try:
-        success = conn.add(
-            dn,
-            object_class=object_classes,
-            attributes=attributes
-        )
+        success = conn.add(dn, object_class=object_classes, attributes=attributes)
         if not success:
-            # Provide more specific feedback if the add fails
             print(f"LDAP Add Failed: {conn.result}")
-            if isinstance(conn.result.get('description'), str):
-                 flash(f"Could not add company: {conn.result['description']}", 'danger')
+            # Check the 'description' key in the result dictionary.
+            if conn.result.get('description') == 'entryAlreadyExists':
+                flash(f"An entry with DN '{dn}' already exists.", 'danger')
+            elif conn.result.get('description') == 'invalidDNSyntax':
+                 flash(f"The generated DN '{dn}' is invalid. Check your Base DN and the entry name.", 'danger')
             else:
-                 flash("An unknown error occurred while adding the company.", 'danger')
+                flash(f"Could not add entry: {conn.result.get('message', 'Unknown error')}", 'danger')
             return False
         return True
-    except LDAPEntryAlreadyExistsResult:
-        flash(f"An entry with DN '{dn}' already exists.", 'danger')
-        return False
-    except LDAPInvalidDNSyntaxResult:
-        flash(f"The generated DN '{dn}' is invalid. Check your Base DN and company name.", 'danger')
-        return False
     except LDAPException as e:
         print(f"LDAP add operation failed: {e}")
-        flash('A critical error occurred during the LDAP operation.', 'danger')
+        flash(f'A critical error occurred during the LDAP add operation: {e}', 'danger')
         return False
     finally:
         if conn:
@@ -138,32 +148,30 @@ def add_ldap_entry(dn, object_classes, attributes):
 
 def modify_ldap_entry(dn, changes):
     """
-    Modifies an existing entry in the LDAP directory.
-
-    :param dn: The Distinguished Name (DN) of the entry to modify.
-    :param changes: A dictionary of changes.
-                    Format: {'attribute_name': [(MODIFY_TYPE, [values])]}
-                    Example: {'mail': [(ldap3.MODIFY_REPLACE, ['new@example.com'])]}
-    :return: True if successful, False otherwise.
+    Modifies an existing entry by checking the operation result for errors.
     """
     conn = get_ldap_connection()
     if not conn:
         return False
-        
+
     try:
         success = conn.modify(dn, changes)
         if not success:
             print(f"LDAP Modify Failed: {conn.result}")
-            if isinstance(conn.result.get('description'), str):
-                flash(f"Could not modify entry: {conn.result['description']}", 'danger')
+            # CORRECTED: Check the 'description' key for the specific error.
+            if conn.result.get('description') == 'noSuchAttribute':
+                # The 'message' key often contains the name of the problematic attribute.
+                error_details = conn.result.get('message', 'N/A')
+                flash(f"Could not modify entry. The server reports a missing attribute. Details: {error_details}", 'danger')
             else:
-                flash("An unknown error occurred while modifying the entry.", 'danger')
+                flash(f"Could not modify entry: {conn.result.get('message', 'Unknown error')}", 'danger')
             return False
         return True
     except LDAPException as e:
         print(f"LDAP modify operation failed: {e}")
-        flash('A critical error occurred during the LDAP modify operation.', 'danger')
+        flash(f"A critical error occurred during the LDAP modify operation: {e}", 'danger')
         return False
     finally:
         if conn:
             conn.unbind()
+

@@ -1,4 +1,3 @@
-# app/__init__.py
 import base64
 from flask import Flask
 from config import Config
@@ -34,4 +33,5 @@ def create_app(config_class=Config):
             """, 500
 
     return app
+
 
