@@ -102,6 +102,7 @@ def get_entry_by_dn(dn, attributes):
 
 def add_ldap_entry(dn, object_classes, attributes):
     """
+
     Adds a new entry to the LDAP directory by checking the operation result.
     """
     conn = get_ldap_connection()

@@ -1,6 +1,10 @@
 import base64
 from flask import Flask
+from flask_caching import Cache
 from config import Config
+
+## Initialize the cache object. It will be configured with the app in the factory.
+cache = Cache()
 
 def b64encode_filter(s):
     """Jinja2 filter to base64 encode a string."""
@@ -14,6 +18,9 @@ def create_app(config_class=Config):
     """
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # Initialize the cache with the application configuration
+    cache.init_app(app)
 
     # Make the config available to all templates.
     @app.context_processor

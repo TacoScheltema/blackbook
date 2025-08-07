@@ -5,3 +5,4 @@ Flask
 python-dotenv
 ldap3
 gunicorn
+Flask-Caching
