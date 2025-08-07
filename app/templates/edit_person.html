@@ -16,17 +16,17 @@
                     </label>
 
                     {% if attr_name == 'o' %}
-                        <input class="form-control" list="company-options" id="o" name="o" value="{{ person.o[0] if person.o }}">
+                        <input class="form-control" list="company-options" id="o" name="o" value="{{ (person.o[0] if person.o else '') }}">
                         <datalist id="company-options">
                             {% for company in companies %}
-                                <option value="{{ company.o }}">
+                                <option value="{{ company.o[0] if company.o else '' }}">
                             {% endfor %}
                         </datalist>
                     {% else %}
                         {% set input_type = 'text' %}
                         {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
                         {% if attr_name == 'telephoneNumber' %}{% set input_type = 'tel' %}{% endif %}
-                        <input type="{{ input_type }}" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}" value="{{ person[attr_name][0] if person.get(attr_name) }}">
+                        <input type="{{ input_type }}" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}" value="{{ (person[attr_name][0] if person.get(attr_name) else '') }}">
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -37,5 +37,4 @@
     </div>
 </div>
 {% endblock %}
-
 

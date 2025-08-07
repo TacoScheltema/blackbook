@@ -18,6 +18,11 @@ def create_app(config_class=Config):
     # Register custom Jinja2 filter for base64 encoding DNs in URLs
     app.jinja_env.filters['b64encode'] = b64encode_filter
 
+    # Make the config available to all templates.
+    @app.context_processor
+    def inject_config():
+        return dict(config=app.config)
+
     # Register blueprints
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
@@ -33,5 +38,4 @@ def create_app(config_class=Config):
             """, 500
 
     return app
-
 
