@@ -15,7 +15,7 @@ def get_ldap_connection():
             get_info=ldap3.ALL,
             use_ssl=use_ssl
         )
-        # CORRECTED: raise_exceptions is False by default, which is the correct
+        # raise_exceptions is False by default, which is the correct
         # pattern for checking conn.result after an operation.
         connection = ldap3.Connection(
             server,
@@ -30,59 +30,42 @@ def get_ldap_connection():
         flash('Could not connect to the LDAP server.', 'danger')
         return None
 
-def search_ldap(filter_str, attributes, paged_size=None, paged_cookie=None):
+def search_ldap(filter_str, attributes, size_limit=0):
     """
-    Performs a search on the LDAP directory, with optional pagination.
+    Performs a search on the LDAP directory.
+    Pagination is handled in the route by slicing the full result set.
+
+    :param filter_str: The LDAP search filter string.
+    :param attributes: A list of attributes to retrieve for each entry.
+    :param size_limit: The maximum number of entries to return (0 for no limit).
+    :return: A list of entry dictionaries or an empty list on error.
     """
     conn = get_ldap_connection()
     if not conn:
-        return [], None
-
+        return []
+    
     base_dn = current_app.config['LDAP_BASE_DN']
-    results = []
-
+    
     try:
-        if paged_size:
-            paged_search_kwargs = {
-                'search_base': base_dn,
-                'search_filter': filter_str,
-                'attributes': attributes,
-                'paged_size': paged_size
-            }
-            if paged_cookie:
-                paged_search_kwargs['paged_cookie'] = paged_cookie
-
-            generator = conn.extend.standard.paged_search(**paged_search_kwargs)
-
-            for entry in generator:
-                if entry['type'] == 'searchResEntry':
-                    result_dict = {'dn': entry['dn']}
-                    for attr in attributes:
-                        if attr in entry['attributes']:
-                           result_dict[attr] = entry['attributes'][attr][0] if len(entry['attributes'][attr]) == 1 else entry['attributes'][attr]
-                        else:
-                           result_dict[attr] = None
-                    results.append(result_dict)
-
-            next_cookie = conn.result.get('cookie')
-            return results, next_cookie
-        else:
-            conn.search(
-                search_base=base_dn,
-                search_filter=filter_str,
-                attributes=attributes
-            )
-            for entry in conn.entries:
-                result_dict = {'dn': entry.entry_dn}
-                for attr in attributes:
-                    result_dict[attr] = entry[attr].value if entry[attr] else None
-                results.append(result_dict)
-            return results, None
-
+        conn.search(
+            search_base=base_dn,
+            search_filter=filter_str,
+            attributes=attributes,
+            size_limit=size_limit
+        )
+        results = []
+        for entry in conn.entries:
+            # Convert ldap3 entry object to a more usable dictionary
+            result_dict = {'dn': entry.entry_dn}
+            for attr in attributes:
+                # Store all values for an attribute in a list.
+                result_dict[attr] = entry[attr].values if entry[attr] else []
+            results.append(result_dict)
+        return results
     except LDAPException as e:
         print(f"LDAP search failed: {e}")
         flash('An error occurred while searching the directory.', 'warning')
-        return [], None
+        return []
     finally:
         if conn:
             conn.unbind()
@@ -94,7 +77,7 @@ def get_entry_by_dn(dn, attributes):
     conn = get_ldap_connection()
     if not conn:
         return None
-
+    
     try:
         conn.search(
             search_base=dn,
@@ -124,12 +107,11 @@ def add_ldap_entry(dn, object_classes, attributes):
     conn = get_ldap_connection()
     if not conn:
         return False
-
+    
     try:
         success = conn.add(dn, object_class=object_classes, attributes=attributes)
         if not success:
             print(f"LDAP Add Failed: {conn.result}")
-            # Check the 'description' key in the result dictionary.
             if conn.result.get('description') == 'entryAlreadyExists':
                 flash(f"An entry with DN '{dn}' already exists.", 'danger')
             elif conn.result.get('description') == 'invalidDNSyntax':
@@ -153,14 +135,12 @@ def modify_ldap_entry(dn, changes):
     conn = get_ldap_connection()
     if not conn:
         return False
-
+    
     try:
         success = conn.modify(dn, changes)
         if not success:
             print(f"LDAP Modify Failed: {conn.result}")
-            # CORRECTED: Check the 'description' key for the specific error.
             if conn.result.get('description') == 'noSuchAttribute':
-                # The 'message' key often contains the name of the problematic attribute.
                 error_details = conn.result.get('message', 'N/A')
                 flash(f"Could not modify entry. The server reports a missing attribute. Details: {error_details}", 'danger')
             else:
