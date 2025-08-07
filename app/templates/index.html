@@ -23,7 +23,13 @@
 
     <!-- All Persons Column -->
     <div class="col-md-8">
+<<<<<<< Updated upstream
         <h2>All Persons</h2>
+=======
+        <div class="d-flex justify-content-between align-items-center">
+            <h3>All Persons <span class="badge bg-light text-dark fw-normal">{{ total_people }}</span></h3>
+        </div>
+>>>>>>> Stashed changes
 
         <!-- Search Form -->
         <form method="GET" action="{{ url_for('main.index') }}" class="mb-3">
@@ -33,20 +39,27 @@
             </div>
         </form>
 
-        <!-- Person List -->
+        <!-- Compact Person List -->
         <div class="list-group shadow-sm">
             {% if people %}
                 {% for person in people %}
-                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="list-group-item list-group-item-action py-2">
                     <div class="d-flex w-100 justify-content-between">
+<<<<<<< Updated upstream
                         <h5 class="mb-1">{{ person.cn or 'Unnamed Person' }}</h5>
                         <small class="text-muted">{{ person.o or '' }}</small>
                     </div>
                     <p class="mb-1 text-muted">{{ person.mail or 'No email available' }}</p>
+=======
+                        <h6 class="mb-0"><strong>{{ person.cn[0] if person.cn else 'N/A' }}</strong></h6>
+                        <small class="text-muted">{{ (person.o[0] if person.o else '') }}</small>
+                    </div>
+                    <small class="text-muted">{{ (person.mail[0] if person.mail else 'No email') }}</small>
+>>>>>>> Stashed changes
                 </a>
                 {% endfor %}
             {% else %}
-                <div class="list-group-item">No persons found.</div>
+                <div class="list-group-item text-center p-4">No persons found.</div>
             {% endif %}
         </div>
 
