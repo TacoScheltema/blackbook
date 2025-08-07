@@ -1,13 +1,12 @@
 import ldap3
-## We only import the base LDAPException. Specific operational exceptions
-## are accessed as attributes of the ldap3 module itself (e.g., ldap3.LDAPEntryAlreadyExistsError).
+## Only the base LDAPException is needed for connection errors.
+## Operational errors are handled by checking the connection result.
 from ldap3.core.exceptions import LDAPException
 from flask import current_app, flash
 
 def get_ldap_connection():
     """
     Establishes a connection to the LDAP server using settings from the app config.
-    The connection is NOT read-only and is set to raise exceptions on errors.
     """
     try:
         use_ssl = current_app.config.get('LDAP_USE_SSL', False)
@@ -16,14 +15,14 @@ def get_ldap_connection():
             get_info=ldap3.ALL,
             use_ssl=use_ssl
         )
+        # CORRECTED: raise_exceptions is False by default, which is the correct
+        # pattern for checking conn.result after an operation.
         connection = ldap3.Connection(
             server,
             user=current_app.config['LDAP_BIND_DN'],
             password=current_app.config['LDAP_BIND_PASSWORD'],
             auto_bind=True,
-            read_only=False,
-            # This makes ldap3 use the modern try...except error handling pattern.
-            raise_exceptions=True
+            read_only=False
         )
         return connection
     except LDAPException as e:
@@ -39,18 +38,11 @@ def search_ldap(filter_str, attributes, paged_size=None, paged_cookie=None):
     if not conn:
         return [], None
 
-    # We temporarily disable exception raising for searches to gracefully handle
-    # cases where a search returns no results, which is not an exceptional state.
-    conn.raise_exceptions = False
-
     base_dn = current_app.config['LDAP_BASE_DN']
     results = []
 
     try:
         if paged_size:
-            # Build the keyword arguments for the paged search.
-            # This prevents the TypeError by only including the paged_cookie
-            # argument when it actually has a value.
             paged_search_kwargs = {
                 'search_base': base_dn,
                 'search_filter': filter_str,
@@ -72,11 +64,9 @@ def search_ldap(filter_str, attributes, paged_size=None, paged_cookie=None):
                            result_dict[attr] = None
                     results.append(result_dict)
 
-            # The cookie for the next page is in the result of the generator
             next_cookie = conn.result.get('cookie')
             return results, next_cookie
         else:
-            # Use simple search for non-paginated results
             conn.search(
                 search_base=base_dn,
                 search_filter=filter_str,
@@ -105,8 +95,6 @@ def get_entry_by_dn(dn, attributes):
     if not conn:
         return None
 
-    conn.raise_exceptions = False
-
     try:
         conn.search(
             search_base=dn,
@@ -131,21 +119,25 @@ def get_entry_by_dn(dn, attributes):
 
 def add_ldap_entry(dn, object_classes, attributes):
     """
-    Adds a new entry to the LDAP directory using try/except for error handling.
+    Adds a new entry to the LDAP directory by checking the operation result.
     """
     conn = get_ldap_connection()
     if not conn:
         return False
 
     try:
-        conn.add(dn, object_class=object_classes, attributes=attributes)
+        success = conn.add(dn, object_class=object_classes, attributes=attributes)
+        if not success:
+            print(f"LDAP Add Failed: {conn.result}")
+            # Check the 'description' key in the result dictionary.
+            if conn.result.get('description') == 'entryAlreadyExists':
+                flash(f"An entry with DN '{dn}' already exists.", 'danger')
+            elif conn.result.get('description') == 'invalidDNSyntax':
+                 flash(f"The generated DN '{dn}' is invalid. Check your Base DN and the entry name.", 'danger')
+            else:
+                flash(f"Could not add entry: {conn.result.get('message', 'Unknown error')}", 'danger')
+            return False
         return True
-    except ldap3.LDAPEntryAlreadyExistsError:
-        flash(f"An entry with DN '{dn}' already exists.", 'danger')
-        return False
-    except ldap3.LDAPInvalidDnError:
-        flash(f"The generated DN '{dn}' is invalid. Check your Base DN and the entry name.", 'danger')
-        return False
     except LDAPException as e:
         print(f"LDAP add operation failed: {e}")
         flash(f'A critical error occurred during the LDAP add operation: {e}', 'danger')
@@ -156,23 +148,26 @@ def add_ldap_entry(dn, object_classes, attributes):
 
 def modify_ldap_entry(dn, changes):
     """
-    Modifies an existing entry, catching specific exceptions for clear feedback.
+    Modifies an existing entry by checking the operation result for errors.
     """
     conn = get_ldap_connection()
     if not conn:
         return False
 
     try:
-        conn.modify(dn, changes)
+        success = conn.modify(dn, changes)
+        if not success:
+            print(f"LDAP Modify Failed: {conn.result}")
+            # CORRECTED: Check the 'description' key for the specific error.
+            if conn.result.get('description') == 'noSuchAttribute':
+                # The 'message' key often contains the name of the problematic attribute.
+                error_details = conn.result.get('message', 'N/A')
+                flash(f"Could not modify entry. The server reports a missing attribute. Details: {error_details}", 'danger')
+            else:
+                flash(f"Could not modify entry: {conn.result.get('message', 'Unknown error')}", 'danger')
+            return False
         return True
-    except ldap3.LDAPNoSuchAttributeError as e:
-        # This is the specific error you were seeing.
-        # The exception 'e' itself contains the useful message.
-        print(f"LDAP Modify Failed with NoSuchAttribute: {e}")
-        flash(f"Could not modify entry. The server reports a missing attribute. Details: {e}", 'danger')
-        return False
     except LDAPException as e:
-        # Catch any other LDAP-related errors.
         print(f"LDAP modify operation failed: {e}")
         flash(f"A critical error occurred during the LDAP modify operation: {e}", 'danger')
         return False
