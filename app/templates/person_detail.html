@@ -21,29 +21,22 @@
     </div>
     <div class="card-body">
         <dl class="row">
-            <dt class="col-sm-3">Full Name</dt>
-            <dd class="col-sm-9">{{ person.cn[0] if person.cn else 'N/A' }}</dd>
-
-            <dt class="col-sm-3">Surname</dt>
-            <dd class="col-sm-9">{{ person.sn[0] if person.sn else 'N/A' }}</dd>
-
-            <dt class="col-sm-3">Given Name</dt>
-            <dd class="col-sm-9">{{ person.givenName[0] if person.givenName else 'N/A' }}</dd>
-
-            <dt class="col-sm-3">Email</dt>
-            <dd class="col-sm-9">
-                {% if person.mail and person.mail[0] %}
-                    <a href="mailto:{{ person.mail[0] }}">{{ person.mail[0] }}</a>
-                {% else %}
-                    N/A
+            {# This loop dynamically displays any attribute that has a value. #}
+            {% for attr, values in person.items() %}
+                {# Skip the DN, as it's not a user-friendly attribute to display. #}
+                {% if attr != 'dn' and values %}
+                    <dt class="col-sm-3 text-capitalize">{{ attr.replace('telephoneNumber', 'Telephone') }}</dt>
+                    <dd class="col-sm-9">
+                        {# If the attribute is 'mail', make it a clickable link. #}
+                        {% if attr == 'mail' and values[0] %}
+                            <a href="mailto:{{ values[0] }}">{{ values[0] }}</a>
+                        {% else %}
+                            {# Handle multi-valued attributes by joining them with a comma. #}
+                            {{ values | join(', ') }}
+                        {% endif %}
+                    </dd>
                 {% endif %}
-            </dd>
-
-            <dt class="col-sm-3">Phone</dt>
-            <dd class="col-sm-9">{{ person.telephoneNumber[0] if person.telephoneNumber else 'N/A' }}</dd>
-
-            <dt class="col-sm-3">Company</dt>
-            <dd class="col-sm-9">{{ person.o[0] if person.o else 'N/A' }}</dd>
+            {% endfor %}
         </dl>
     </div>
 </div>

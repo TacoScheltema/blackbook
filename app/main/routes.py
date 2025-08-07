@@ -4,7 +4,7 @@ from flask import render_template, current_app, abort, request, flash, redirect,
 from app.main import bp
 from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
 
-PERSON_ATTRS = ['cn', 'sn', 'givenName', 'mail', 'telephoneNumber', 'o']
+## Removed hardcoded PERSON_ATTRS list. It will now be read from config.
 COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode']
 PAGE_SIZE = 25
 
@@ -15,36 +15,30 @@ def get_config(key):
 @bp.route('/')
 def index():
     """Main index page. Lists all companies and a paginated list of all persons."""
-    # --- Companies List (remains the same) ---
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_filter = f'(objectClass={company_class})'
     companies, _ = search_ldap(company_filter, ['o'], paged_size=200)
 
-    # --- Persons List (paginated and searchable) ---
     search_query = request.args.get('q', '')
-
-    # Get the URL-safe cookie string from the request args
     encoded_cookie = request.args.get('cookie')
     paged_cookie_bytes = None
     if encoded_cookie:
         try:
-            # Decode the string back into bytes for the ldap3 library
             paged_cookie_bytes = base64.urlsafe_b64decode(encoded_cookie)
         except (base64.binascii.Error, UnicodeDecodeError):
             flash('Invalid pagination data received.', 'warning')
             return redirect(url_for('main.index'))
 
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES') # Get attributes from config
 
     if search_query:
         search_filter = f"(&(objectClass={person_class})(|(cn=*{search_query}*)(sn=*{search_query}*)(givenName=*{search_query}*)))"
     else:
         search_filter = f"(objectClass={person_class})"
 
-    # Pass the decoded bytes cookie to the search function
-    people, next_cookie_bytes = search_ldap(search_filter, PERSON_ATTRS, paged_size=PAGE_SIZE, paged_cookie=paged_cookie_bytes)
+    people, next_cookie_bytes = search_ldap(search_filter, person_attrs, paged_size=PAGE_SIZE, paged_cookie=paged_cookie_bytes)
 
-    # Encode the next cookie (if it exists) into a URL-safe string for the template
     next_encoded_cookie = None
     if next_cookie_bytes:
         next_encoded_cookie = base64.urlsafe_b64encode(next_cookie_bytes).decode('utf-8')
@@ -104,13 +98,15 @@ def company_detail(b64_dn):
         abort(404)
 
     company_name = company.get('o', [None])[0]
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES') # Get attributes from config
+
     if not company_name:
         employees = []
     else:
         person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
         company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
         employee_filter = f'(& (objectClass={person_class}) ({company_link_attr}={company_name}) )'
-        employees, _ = search_ldap(employee_filter, PERSON_ATTRS, paged_size=200)
+        employees, _ = search_ldap(employee_filter, person_attrs, paged_size=200)
 
     return render_template('company_detail.html', title=company_name, company=company, employees=employees)
 
@@ -122,7 +118,8 @@ def person_detail(b64_dn):
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
-    person = get_entry_by_dn(dn, PERSON_ATTRS)
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES') # Get attributes from config
+    person = get_entry_by_dn(dn, person_attrs)
     if not person:
         abort(404)
 
@@ -137,44 +134,33 @@ def edit_person(b64_dn):
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
-    # For both GET and POST, we need the current state of the person.
-    current_person = get_entry_by_dn(dn, PERSON_ATTRS)
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES') # Get attributes from config
+    current_person = get_entry_by_dn(dn, person_attrs)
     if not current_person:
         abort(404)
 
     if request.method == 'POST':
         changes = {}
-        form_data = {
-            'cn': request.form.get('cn'),
-            'sn': request.form.get('sn'),
-            'givenName': request.form.get('givenName'),
-            'mail': request.form.get('mail'),
-            'telephoneNumber': request.form.get('telephoneNumber'),
-            'o': request.form.get('company')
-        }
+        # Iterate through the attributes defined in the config to build the changes
+        for attr in person_attrs:
+            form_value = request.form.get(attr)
 
-        for attr, form_value in form_data.items():
-            # Check if the attribute currently exists on the user entry.
-            attr_exists = current_person.get(attr)
+            if form_value is not None:
+                attr_exists = current_person.get(attr)
+                current_value = (attr_exists or [None])[0]
 
-            if form_value:
-                # If the form has a value, we always want to set/replace it.
-                # MODIFY_REPLACE works for both adding a new attribute and modifying an existing one.
-                changes[attr] = [(ldap3.MODIFY_REPLACE, [form_value])]
-            elif not form_value and attr_exists:
-                # If the form value is empty AND the attribute exists on the LDAP entry, delete it.
-                changes[attr] = [(ldap3.MODIFY_DELETE, [])]
-            # If the form value is empty and the attribute does not exist, we do nothing, preventing the error.
+                if form_value and form_value != current_value:
+                    changes[attr] = [(ldap3.MODIFY_REPLACE, [form_value])]
+                elif not form_value and attr_exists:
+                    changes[attr] = [(ldap3.MODIFY_DELETE, [])]
 
         if not changes:
             flash('No changes were submitted.', 'info')
         elif modify_ldap_entry(dn, changes):
             flash('Person details updated successfully!', 'success')
-        # If modify_ldap_entry returns False, the error is flashed from within that function.
 
         return redirect(url_for('main.person_detail', b64_dn=b64_dn))
 
-    # For GET request, fetch company list for the dropdown.
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_filter = f'(objectClass={company_class})'
     companies, _ = search_ldap(company_filter, ['o'], paged_size=200)
