@@ -4,12 +4,27 @@ import math
 from flask import render_template, current_app, abort, request, flash, redirect, url_for
 from app.main import bp
 from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
+## Import the cache object we created in app/__init__.py
+from app import cache
 
 COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode']
 
 def get_config(key):
     """Helper to safely get config values."""
     return current_app.config.get(key, '')
+
+@cache.memoize()
+def get_all_people_cached():
+    """
+    A cached function to get all people from LDAP.
+    This function's result will be stored in the cache. The cache key is
+    the function name. It will only be re-run when the cache times out.
+    """
+    print("CACHE MISS: Fetching all people from LDAP server...")
+    person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
+    search_filter = f"(objectClass={person_class})"
+    return search_ldap(search_filter, person_attrs)
 
 @bp.route('/')
 def index():
@@ -19,10 +34,9 @@ def index():
     company_filter = f'(objectClass={company_class})'
     companies = search_ldap(company_filter, ['o'], size_limit=200)
 
-    # --- Persons List (with new pagination logic) ---
+    # --- Persons List (with caching) ---
     search_query = request.args.get('q', '')
     
-    # Get page size from request, default to 20. Ensure it's a valid choice.
     try:
         page_size = int(request.args.get('page_size', 20))
         if page_size not in [20, 30, 50]:
@@ -30,38 +44,37 @@ def index():
     except ValueError:
         page_size = 20
         
-    # Get current page number, default to 1.
     try:
         page = int(request.args.get('page', 1))
     except ValueError:
         page = 1
 
-    person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
-    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
-    
-    if search_query:
-        search_filter = f"(&(objectClass={person_class})(|(cn=*{search_query}*)(sn=*{search_query}*)(givenName=*{search_query}*)))"
-    else:
-        search_filter = f"(objectClass={person_class})"
+    # Get the full list of people from our new cached function.
+    # This will be instant if the data is already in the cache.
+    all_people = get_all_people_cached()
 
-    # Fetch ALL people matching the filter.
-    all_people = search_ldap(search_filter, person_attrs)
+    # If a search query is present, filter the cached results.
+    if search_query:
+        query = search_query.lower()
+        # This is a simple case-insensitive search on the 'cn' attribute.
+        all_people = [
+            p for p in all_people 
+            if p.get('cn') and query in p['cn'][0].lower()
+        ]
+
     total_people = len(all_people)
     
-    # Calculate pagination values
+    # Calculate pagination values from the (potentially filtered) list
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
     people_on_page = all_people[start_index:end_index]
     
     total_pages = math.ceil(total_people / page_size)
 
-    # --- Generate the list of page numbers for the navigation ---
-    # Show up to 6 page numbers.
     PAGES_TO_SHOW = 6
     start_page = max(1, page - (PAGES_TO_SHOW // 2))
     end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
     
-    # Adjust start_page if we are near the end
     if end_page - start_page + 1 < PAGES_TO_SHOW:
         start_page = max(1, end_page - PAGES_TO_SHOW + 1)
 
@@ -104,6 +117,7 @@ def add_company():
 
         if add_ldap_entry(new_dn, object_classes, attributes):
             flash(f'Company "{company_name}" added successfully!', 'success')
+            cache.clear() # Clear the cache after adding a company
             b64_dn = base64.urlsafe_b64encode(new_dn.encode('utf-8')).decode('utf-8')
             return redirect(url_for('main.company_detail', b64_dn=b64_dn))
         else:
@@ -184,6 +198,7 @@ def edit_person(b64_dn):
             flash('No changes were submitted.', 'info')
         elif modify_ldap_entry(dn, changes):
             flash('Person details updated successfully!', 'success')
+            cache.clear() # Clear the cache after a successful modification
         
         return redirect(url_for('main.person_detail', b64_dn=b64_dn))
 
