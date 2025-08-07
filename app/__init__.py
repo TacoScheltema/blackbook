@@ -15,6 +15,11 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Make the config available to all templates.
+    @app.context_processor
+    def inject_config():
+        return dict(config=app.config)
+
     # Register custom Jinja2 filter for base64 encoding DNs in URLs
     app.jinja_env.filters['b64encode'] = b64encode_filter
 
@@ -33,5 +38,4 @@ def create_app(config_class=Config):
             """, 500
 
     return app
-
 
