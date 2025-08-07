@@ -53,7 +53,7 @@ def search_ldap(filter_str, attributes, paged_size=None, paged_cookie=None):
                 search_filter=filter_str,
                 attributes=attributes,
                 paged_size=paged_size,
-                cookie=paged_cookie
+                paged_cookie=paged_cookie
             )
             for entry in generator:
                 if entry['type'] == 'searchResEntry':
