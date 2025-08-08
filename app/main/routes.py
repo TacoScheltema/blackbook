@@ -26,6 +26,16 @@ def get_all_people_cached():
     search_filter = f"(objectClass={person_class})"
     return search_ldap(search_filter, person_attrs)
 
+def safe_int_from_request(arg_name, default_value):
+    """
+    Safely gets an integer from the request arguments.
+    Returns the default value if the argument is missing or not a valid integer.
+    """
+    val = request.args.get(arg_name)
+    if val is None or not val.isdigit():
+        return default_value
+    return int(val)
+
 @bp.route('/')
 def index():
     """Main index page. Lists all companies and a paginated list of all persons."""
@@ -35,10 +45,7 @@ def index():
     all_companies = search_ldap(company_filter, ['o']) # Fetch all companies
     total_companies = len(all_companies)
 
-    try:
-        cpage = int(request.args.get('cpage') or 1)
-    except (ValueError, TypeError):
-        cpage = 1
+    cpage = safe_int_from_request('cpage', 1)
     
     COMPANY_PAGE_SIZE = 15 # A fixed page size for the smaller company list
     c_start_index = (cpage - 1) * COMPANY_PAGE_SIZE
@@ -59,25 +66,16 @@ def index():
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
 
-    # CORRECTED: More robustly parse page size from request arguments.
-    try:
-        page_size = int(request.args.get('page_size') or default_page_size)
-        if page_size not in page_size_options:
-            page_size = default_page_size
-    except (ValueError, TypeError):
+    page_size = safe_int_from_request('page_size', default_page_size)
+    if page_size not in page_size_options:
         page_size = default_page_size
         
-    # CORRECTED: More robustly parse page number from request arguments.
-    try:
-        page = int(request.args.get('page') or 1)
-    except (ValueError, TypeError):
-        page = 1
+    page = safe_int_from_request('page', 1)
 
     all_people = get_all_people_cached()
 
     if search_query:
         query = search_query.lower()
-        # CORRECTED: Added check to prevent IndexError on empty 'cn' attribute.
         all_people = [
             p for p in all_people 
             if p.get('cn') and p['cn'] and query in p['cn'][0].lower()
