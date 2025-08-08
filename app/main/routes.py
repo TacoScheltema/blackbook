@@ -33,17 +33,39 @@ def _get_int_arg(name, default_value):
     returning a safe default.
     """
     try:
-        return int(request.args.get(name, default_value))
+        # Get the value, if it's None, use the default.
+        value = request.args.get(name)
+        if value is None:
+            return int(default_value)
+        # Try to convert the string value to an integer.
+        return int(value)
     except (ValueError, TypeError):
-        return default_value
+        # If conversion fails, return the default.
+        return int(default_value)
 
 @bp.route('/')
 def index():
     """Main index page. Lists all companies and a paginated list of all persons."""
-    # --- Companies List (reverted to non-paginated) ---
+    # --- Companies List (now with pagination) ---
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_filter = f'(objectClass={company_class})'
-    companies = search_ldap(company_filter, ['o'], size_limit=200)
+    all_companies = search_ldap(company_filter, ['o']) # Fetch all companies
+    total_companies = len(all_companies)
+
+    cpage = _get_int_arg('cpage', 1)
+    
+    COMPANY_PAGE_SIZE = 15 # A fixed page size for the smaller company list
+    c_start_index = (cpage - 1) * COMPANY_PAGE_SIZE
+    c_end_index = c_start_index + COMPANY_PAGE_SIZE
+    companies_on_page = all_companies[c_start_index:c_end_index]
+    total_company_pages = math.ceil(total_companies / COMPANY_PAGE_SIZE)
+
+    C_PAGES_TO_SHOW = 4 # How many page numbers to show in the company nav
+    c_start_page = max(1, cpage - (C_PAGES_TO_SHOW // 2))
+    c_end_page = min(total_company_pages, c_start_page + C_PAGES_TO_SHOW - 1)
+    if c_end_page - c_start_page + 1 < C_PAGES_TO_SHOW:
+        c_start_page = max(1, c_end_page - C_PAGES_TO_SHOW + 1)
+    company_page_numbers = range(c_start_page, c_end_page + 1)
 
     # --- Persons List (with caching and configurable pagination) ---
     search_query = request.args.get('q', '')
@@ -51,6 +73,7 @@ def index():
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
 
+    # Use the robust helper function to get guaranteed integers.
     page_size = _get_int_arg('page_size', default_page_size)
     if page_size not in page_size_options:
         page_size = default_page_size
@@ -85,14 +108,17 @@ def index():
 
     return render_template('index.html', 
                            title='Address Book', 
-                           companies=companies, 
+                           companies=companies_on_page, 
                            people=people_on_page,
                            search_query=search_query,
                            page=page,
                            page_size=page_size,
                            total_pages=total_pages,
                            total_people=total_people,
-                           page_numbers=page_numbers)
+                           page_numbers=page_numbers,
+                           cpage=cpage,
+                           total_company_pages=total_company_pages,
+                           company_page_numbers=company_page_numbers)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
@@ -211,4 +237,3 @@ def edit_person(b64_dn):
 
     person_name = current_person.get('cn', ['Unknown'])[0]
     return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, companies=companies, b64_dn=b64_dn)
-
