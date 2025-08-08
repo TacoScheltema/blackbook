@@ -36,8 +36,8 @@ def index():
     total_companies = len(all_companies)
 
     try:
-        cpage = int(request.args.get('cpage', 1))
-    except ValueError:
+        cpage = int(request.args.get('cpage') or 1)
+    except (ValueError, TypeError):
         cpage = 1
     
     COMPANY_PAGE_SIZE = 15 # A fixed page size for the smaller company list
@@ -59,25 +59,28 @@ def index():
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
 
+    # CORRECTED: More robustly parse page size from request arguments.
     try:
-        page_size = int(request.args.get('page_size', default_page_size))
+        page_size = int(request.args.get('page_size') or default_page_size)
         if page_size not in page_size_options:
             page_size = default_page_size
-    except ValueError:
+    except (ValueError, TypeError):
         page_size = default_page_size
         
+    # CORRECTED: More robustly parse page number from request arguments.
     try:
-        page = int(request.args.get('page', 1))
-    except ValueError:
+        page = int(request.args.get('page') or 1)
+    except (ValueError, TypeError):
         page = 1
 
     all_people = get_all_people_cached()
 
     if search_query:
         query = search_query.lower()
+        # CORRECTED: Added check to prevent IndexError on empty 'cn' attribute.
         all_people = [
             p for p in all_people 
-            if p.get('cn') and query in p['cn'][0].lower()
+            if p.get('cn') and p['cn'] and query in p['cn'][0].lower()
         ]
 
     total_people = len(all_people)
