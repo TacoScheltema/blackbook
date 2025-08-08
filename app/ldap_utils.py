@@ -1,6 +1,6 @@
 import ldap3
-## Only the base LDAPException is needed for connection errors.
-## Operational errors are handled by checking the connection result.
+# Only the base LDAPException is needed for connection errors.
+# Operational errors are handled by checking the connection result.
 from ldap3.core.exceptions import LDAPException
 from flask import current_app, flash
 
@@ -102,7 +102,6 @@ def get_entry_by_dn(dn, attributes):
 
 def add_ldap_entry(dn, object_classes, attributes):
     """
-
     Adds a new entry to the LDAP directory by checking the operation result.
     """
     conn = get_ldap_connection()

@@ -4,7 +4,7 @@ import math
 from flask import render_template, current_app, abort, request, flash, redirect, url_for
 from app.main import bp
 from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
-## Import the cache object we created in app/__init__.py
+# Import the cache object we created in app/__init__.py
 from app import cache
 
 COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode']
@@ -34,29 +34,28 @@ def index():
     company_filter = f'(objectClass={company_class})'
     companies = search_ldap(company_filter, ['o'], size_limit=200)
 
-    # --- Persons List (with caching) ---
+    # --- Persons List (with caching and configurable pagination) ---
     search_query = request.args.get('q', '')
     
+    page_size_options = get_config('PAGE_SIZE_OPTIONS')
+    default_page_size = get_config('DEFAULT_PAGE_SIZE')
+
     try:
-        page_size = int(request.args.get('page_size', 20))
-        if page_size not in [20, 30, 50]:
-            page_size = 20
+        page_size = int(request.args.get('page_size', default_page_size))
+        if page_size not in page_size_options:
+            page_size = default_page_size
     except ValueError:
-        page_size = 20
+        page_size = default_page_size
         
     try:
         page = int(request.args.get('page', 1))
     except ValueError:
         page = 1
 
-    # Get the full list of people from our new cached function.
-    # This will be instant if the data is already in the cache.
     all_people = get_all_people_cached()
 
-    # If a search query is present, filter the cached results.
     if search_query:
         query = search_query.lower()
-        # This is a simple case-insensitive search on the 'cn' attribute.
         all_people = [
             p for p in all_people 
             if p.get('cn') and query in p['cn'][0].lower()
@@ -64,7 +63,6 @@ def index():
 
     total_people = len(all_people)
     
-    # Calculate pagination values from the (potentially filtered) list
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
     people_on_page = all_people[start_index:end_index]
@@ -208,5 +206,4 @@ def edit_person(b64_dn):
 
     person_name = current_person.get('cn', ['Unknown'])[0]
     return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, companies=companies, b64_dn=b64_dn)
-
 
