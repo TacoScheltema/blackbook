@@ -4,7 +4,7 @@ import math
 from flask import render_template, current_app, abort, request, flash, redirect, url_for
 from app.main import bp
 from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
-## Import the cache object we created in app/__init__.py
+# Import the cache object we created in app/__init__.py
 from app import cache
 
 COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode']
@@ -29,34 +29,52 @@ def get_all_people_cached():
 @bp.route('/')
 def index():
     """Main index page. Lists all companies and a paginated list of all persons."""
-    # --- Companies List (remains the same) ---
+    # --- Companies List (now with pagination) ---
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_filter = f'(objectClass={company_class})'
-    companies = search_ldap(company_filter, ['o'], size_limit=200)
+    all_companies = search_ldap(company_filter, ['o']) # Fetch all companies
+    total_companies = len(all_companies)
 
-    # --- Persons List (with caching) ---
+    try:
+        cpage = int(request.args.get('cpage', 1))
+    except ValueError:
+        cpage = 1
+    
+    COMPANY_PAGE_SIZE = 15 # A fixed page size for the smaller company list
+    c_start_index = (cpage - 1) * COMPANY_PAGE_SIZE
+    c_end_index = c_start_index + COMPANY_PAGE_SIZE
+    companies_on_page = all_companies[c_start_index:c_end_index]
+    total_company_pages = math.ceil(total_companies / COMPANY_PAGE_SIZE)
+
+    C_PAGES_TO_SHOW = 4 # How many page numbers to show in the company nav
+    c_start_page = max(1, cpage - (C_PAGES_TO_SHOW // 2))
+    c_end_page = min(total_company_pages, c_start_page + C_PAGES_TO_SHOW - 1)
+    if c_end_page - c_start_page + 1 < C_PAGES_TO_SHOW:
+        c_start_page = max(1, c_end_page - C_PAGES_TO_SHOW + 1)
+    company_page_numbers = range(c_start_page, c_end_page + 1)
+
+    # --- Persons List (with caching and configurable pagination) ---
     search_query = request.args.get('q', '')
     
+    page_size_options = get_config('PAGE_SIZE_OPTIONS')
+    default_page_size = get_config('DEFAULT_PAGE_SIZE')
+
     try:
-        page_size = int(request.args.get('page_size', 20))
-        if page_size not in [20, 30, 50]:
-            page_size = 20
+        page_size = int(request.args.get('page_size', default_page_size))
+        if page_size not in page_size_options:
+            page_size = default_page_size
     except ValueError:
-        page_size = 20
+        page_size = default_page_size
         
     try:
         page = int(request.args.get('page', 1))
     except ValueError:
         page = 1
 
-    # Get the full list of people from our new cached function.
-    # This will be instant if the data is already in the cache.
     all_people = get_all_people_cached()
 
-    # If a search query is present, filter the cached results.
     if search_query:
         query = search_query.lower()
-        # This is a simple case-insensitive search on the 'cn' attribute.
         all_people = [
             p for p in all_people 
             if p.get('cn') and query in p['cn'][0].lower()
@@ -64,7 +82,6 @@ def index():
 
     total_people = len(all_people)
     
-    # Calculate pagination values from the (potentially filtered) list
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
     people_on_page = all_people[start_index:end_index]
@@ -82,14 +99,17 @@ def index():
 
     return render_template('index.html', 
                            title='Address Book', 
-                           companies=companies, 
+                           companies=companies_on_page, 
                            people=people_on_page,
                            search_query=search_query,
                            page=page,
                            page_size=page_size,
                            total_pages=total_pages,
                            total_people=total_people,
-                           page_numbers=page_numbers)
+                           page_numbers=page_numbers,
+                           cpage=cpage,
+                           total_company_pages=total_company_pages,
+                           company_page_numbers=company_page_numbers)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
@@ -208,5 +228,4 @@ def edit_person(b64_dn):
 
     person_name = current_person.get('cn', ['Unknown'])[0]
     return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, companies=companies, b64_dn=b64_dn)
-
 
