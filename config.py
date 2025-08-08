@@ -70,5 +70,4 @@ class Config:
     
     # The default page size will be the first option in the list.
     DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0] if PAGE_SIZE_OPTIONS else 20
-# end file
 

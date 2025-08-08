@@ -9,5 +9,4 @@ if __name__ == "__main__":
     # Note: The reloader and debugger should be disabled in production.
     # The create_app function reads the FLASK_DEBUG environment variable.
     application.run(host='0.0.0.0')
-# end file
 

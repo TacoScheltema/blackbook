@@ -206,5 +206,4 @@ def edit_person(b64_dn):
 
     person_name = current_person.get('cn', ['Unknown'])[0]
     return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, companies=companies, b64_dn=b64_dn)
-# end file
 

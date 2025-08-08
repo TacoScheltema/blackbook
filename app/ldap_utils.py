@@ -154,5 +154,4 @@ def modify_ldap_entry(dn, changes):
     finally:
         if conn:
             conn.unbind()
-# end file
 
