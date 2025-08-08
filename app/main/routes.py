@@ -26,15 +26,16 @@ def get_all_people_cached():
     search_filter = f"(objectClass={person_class})"
     return search_ldap(search_filter, person_attrs)
 
-def safe_int_from_request(arg_name, default_value):
+def _get_int_arg(name, default_value):
     """
-    Safely gets an integer from the request arguments.
-    Returns the default value if the argument is missing or not a valid integer.
+    A robust helper function to safely get an integer from request arguments.
+    It handles missing keys, empty values, and non-numeric values by
+    returning a safe default.
     """
-    val = request.args.get(arg_name)
-    if val is None or not val.isdigit():
+    try:
+        return int(request.args.get(name, default_value))
+    except (ValueError, TypeError):
         return default_value
-    return int(val)
 
 @bp.route('/')
 def index():
@@ -45,7 +46,7 @@ def index():
     all_companies = search_ldap(company_filter, ['o']) # Fetch all companies
     total_companies = len(all_companies)
 
-    cpage = safe_int_from_request('cpage', 1)
+    cpage = _get_int_arg('cpage', 1)
     
     COMPANY_PAGE_SIZE = 15 # A fixed page size for the smaller company list
     c_start_index = (cpage - 1) * COMPANY_PAGE_SIZE
@@ -66,11 +67,12 @@ def index():
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
 
-    page_size = safe_int_from_request('page_size', default_page_size)
+    # Use the robust helper function to get guaranteed integers.
+    page_size = _get_int_arg('page_size', default_page_size)
     if page_size not in page_size_options:
         page_size = default_page_size
         
-    page = safe_int_from_request('page', 1)
+    page = _get_int_arg('page', 1)
 
     all_people = get_all_people_cached()
 
