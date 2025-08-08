@@ -21,7 +21,7 @@
                     <label for="page_size_select" class="visually-hidden">Results per page</label>
                     <select class="form-select" name="page_size" id="page_size_select" onchange="this.form.submit()">
                         {% for size in config.PAGE_SIZE_OPTIONS %}
-                        <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }} / page</option>
+                        <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }}</option>
                         {% endfor %}
                     </select>
                 </div>
