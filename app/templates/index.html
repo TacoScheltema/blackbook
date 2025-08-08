@@ -32,12 +32,12 @@
         <div class="list-group shadow-sm">
             {% if people %}
                 {% for person in people %}
-                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="list-group-item list-group-item-action py-1">
+                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="list-group-item list-group-item-action py-1 compact-list-item">
                     <div class="d-flex w-100 justify-content-between">
-                        <div class="fw-bold">{{ person.cn[0] if person.cn else 'N/A' }}</div>
-                        <small class="text-body-secondary">{{ (person.o[0] if person.o else '') }}</small>
+                        <div class="person-name">{{ person.cn[0] if person.cn else 'N/A' }}</div>
+                        <small class="person-meta">{{ (person.o[0] if person.o else '') }}</small>
                     </div>
-                    <small class="text-body-secondary">{{ (person.mail[0] if person.mail else 'No email') }}</small>
+                    <small class="person-meta">{{ (person.mail[0] if person.mail else 'No email') }}</small>
                 </a>
                 {% endfor %}
             {% else %}

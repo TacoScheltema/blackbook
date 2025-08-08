@@ -7,3 +7,14 @@ body {
     font-size: 1.75rem;
 }
 
+/* Styles for the compact person list on the main page */
+.compact-list-item .person-name {
+    font-size: 12.8px; /* Default font size for the name */
+    font-weight: 500; /* A bit bolder than normal */
+}
+
+.compact-list-item .person-meta {
+    font-size: 10px; /* Smaller font size for email and company */
+    color: #6c757d; /* Bootstrap's standard muted text color */
+}
+
