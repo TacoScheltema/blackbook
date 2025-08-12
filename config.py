@@ -79,8 +79,7 @@ class Config:
             ('o', 'Company'),
             ('street', 'Street'),
             ('postalCode', 'Postcode'),
-            ('l', 'City'),
-            ('countryCode', 'Country')
+            ('l', 'City')
         ])
 
     LDAP_COMPANY_ATTRIBUTES = list(LDAP_COMPANY_ATTRIBUTE_MAP.keys())
