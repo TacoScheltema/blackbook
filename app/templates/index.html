@@ -35,8 +35,8 @@
                     <tr class="sortable-header">
                         <th><a href="{{ url_for('main.index', sort_by='givenName', sort_order='desc' if sort_by == 'givenName' and sort_order == 'asc' else 'asc', page=page, page_size=page_size, q=search_query) }}">Given Name {% if sort_by == 'givenName' %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a></th>
                         <th><a href="{{ url_for('main.index', sort_by='sn', sort_order='desc' if sort_by == 'sn' and sort_order == 'asc' else 'asc', page=page, page_size=page_size, q=search_query) }}">Surname {% if sort_by == 'sn' %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a></th>
-                        <th><a href="{{ url_for('main.index', sort_by='mail', sort_order='desc' if sort_by == 'mail' and sort_order == 'asc' else 'asc', page=page, page_size=page_size, q=search_query) }}">Email {% if sort_by == 'mail' %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a></th>
-                        <th><a href="{{ url_for('main.index', sort_by='telephoneNumber', sort_order='desc' if sort_by == 'telephoneNumber' and sort_order == 'asc' else 'asc', page=page, page_size=page_size, q=search_query) }}">Telephone {% if sort_by == 'telephoneNumber' %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a></th>
+                        <th>Email</th>
+                        <th>Telephone</th>
                         <th><a href="{{ url_for('main.index', sort_by='o', sort_order='desc' if sort_by == 'o' and sort_order == 'asc' else 'asc', page=page, page_size=page_size, q=search_query) }}">Company {% if sort_by == 'o' %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a></th>
                     </tr>
                 </thead>

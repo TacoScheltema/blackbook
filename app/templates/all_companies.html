@@ -26,10 +26,14 @@
             <tr class="sortable-header">
                 {% for attr_name, display_name in config.LDAP_COMPANY_ATTRIBUTE_MAP.items() %}
                     <th>
-                        <a href="{{ url_for('main.all_companies', sort_by=attr_name, sort_order='desc' if sort_by == attr_name and sort_order == 'asc' else 'asc', page=page) }}">
+                        {% if attr_name == 'o' %}
+                            <a href="{{ url_for('main.all_companies', sort_by=attr_name, sort_order='desc' if sort_by == attr_name and sort_order == 'asc' else 'asc', page=page) }}">
+                                {{ display_name }}
+                                {% if sort_by == attr_name %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
+                            </a>
+                        {% else %}
                             {{ display_name }}
-                            {% if sort_by == attr_name %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
-                        </a>
+                        {% endif %}
                     </th>
                 {% endfor %}
             </tr>
