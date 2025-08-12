@@ -24,32 +24,36 @@ def get_all_people_cached():
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
     person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
     search_filter = f"(objectClass={person_class})"
-    all_people = search_ldap(search_filter, person_attrs)
-    # Sort people by common name (cn)
-    all_people.sort(key=lambda x: (x.get('cn') or [''])[0].lower())
-    return all_people
-
-@cache.memoize()
-def get_all_companies_cached():
-    """A cached function to get all companies from LDAP, sorted."""
-    print("CACHE MISS: Fetching all companies from LDAP server...")
-    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
-    company_filter = f'(objectClass={company_class})'
-    all_companies = search_ldap(company_filter, ['o'])
-    # Sort companies by organization name (o)
-    all_companies.sort(key=lambda x: (x.get('o') or [''])[0].lower())
-    return all_companies
+    return search_ldap(search_filter, person_attrs)
 
 @bp.route('/')
 def index():
-    """Main index page. Lists a preview of companies and a paginated list of all persons."""
-    # --- Companies List ---
-    all_companies = get_all_companies_cached()
+    """Main index page. Lists all companies and a paginated list of all persons."""
+    # --- Companies List (with pagination) ---
+    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
+    company_filter = f'(objectClass={company_class})'
+    all_companies = search_ldap(company_filter, ['o'])
     total_companies = len(all_companies)
-    # Show the first 20 companies on the main page
-    companies_preview = all_companies[:20]
 
-    # --- Persons List ---
+    try:
+        cpage = int(request.args.get('cpage', 1))
+    except ValueError:
+        cpage = 1
+
+    COMPANY_PAGE_SIZE = 15
+    c_start_index = (cpage - 1) * COMPANY_PAGE_SIZE
+    c_end_index = c_start_index + COMPANY_PAGE_SIZE
+    companies_on_page = all_companies[c_start_index:c_end_index]
+    total_company_pages = math.ceil(total_companies / COMPANY_PAGE_SIZE)
+
+    C_PAGES_TO_SHOW = 4
+    c_start_page = max(1, cpage - (C_PAGES_TO_SHOW // 2))
+    c_end_page = min(total_company_pages, c_start_page + C_PAGES_TO_SHOW - 1)
+    if c_end_page - c_start_page + 1 < C_PAGES_TO_SHOW:
+        c_start_page = max(1, c_end_page - C_PAGES_TO_SHOW + 1)
+    company_page_numbers = range(c_start_page, c_end_page + 1)
+
+    # --- Persons List (with caching and configurable pagination) ---
     search_query = request.args.get('q', '')
 
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
@@ -59,7 +63,7 @@ def index():
         page_size = int(request.args.get('page_size', default_page_size))
         if page_size not in page_size_options:
             page_size = default_page_size
-    except (ValueError, TypeError):
+    except ValueError:
         page_size = default_page_size
 
     try:
@@ -73,14 +77,13 @@ def index():
         query = search_query.lower()
         all_people = [
             p for p in all_people 
-            if p.get('cn') and p['cn'] and query in p['cn'][0].lower()
+            if p.get('cn') and query in p['cn'][0].lower()
         ]
 
     total_people = len(all_people)
 
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
-
     people_on_page = all_people[start_index:end_index]
 
     total_pages = math.ceil(total_people / page_size)
@@ -96,47 +99,17 @@ def index():
 
     return render_template('index.html', 
                            title='Address Book', 
-                           companies=companies_preview,
-                           total_companies=total_companies,
+                           companies=companies_on_page, 
                            people=people_on_page,
                            search_query=search_query,
                            page=page,
                            page_size=page_size,
                            total_pages=total_pages,
                            total_people=total_people,
-                           page_numbers=page_numbers)
-
-@bp.route('/companies')
-def all_companies():
-    """A dedicated page to list all companies with pagination."""
-    all_companies_list = get_all_companies_cached()
-    total_companies = len(all_companies_list)
-
-    try:
-        page = int(request.args.get('page', 1))
-    except ValueError:
-        page = 1
-
-    page_size = 20  # Fixed page size for this view
-    start_index = (page - 1) * page_size
-    end_index = start_index + page_size
-    companies_on_page = all_companies_list[start_index:end_index]
-
-    total_pages = math.ceil(total_companies / page_size)
-
-    PAGES_TO_SHOW = 6
-    start_page = max(1, page - (PAGES_TO_SHOW // 2))
-    end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
-    if end_page - start_page + 1 < PAGES_TO_SHOW:
-        start_page = max(1, end_page - PAGES_TO_SHOW + 1)
-    page_numbers = range(start_page, end_page + 1)
-
-    return render_template('all_companies.html',
-                           title='All Companies',
-                           companies=companies_on_page,
-                           page=page,
-                           total_pages=total_pages,
-                           page_numbers=page_numbers)
+                           page_numbers=page_numbers,
+                           cpage=cpage,
+                           total_company_pages=total_company_pages,
+                           company_page_numbers=company_page_numbers)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
@@ -185,7 +158,7 @@ def company_detail(b64_dn):
     if not company:
         abort(404)
 
-    company_name = (company.get('o') or [None])[0]
+    company_name = company.get('o', [None])[0]
     person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
 
     if not company_name:
@@ -211,7 +184,7 @@ def person_detail(b64_dn):
     if not person:
         abort(404)
 
-    person_name = (person.get('cn') or ['Unknown'])[0]
+    person_name = person.get('cn', ['Unknown'])[0]
     return render_template('person_detail.html', title=person_name, person=person, b64_dn=b64_dn)
 
 @bp.route('/person/edit/<b64_dn>', methods=['GET', 'POST'])
@@ -253,6 +226,6 @@ def edit_person(b64_dn):
     company_filter = f'(objectClass={company_class})'
     companies = search_ldap(company_filter, ['o'], size_limit=200)
 
-    person_name = (current_person.get('cn') or ['Unknown'])[0]
+    person_name = current_person.get('cn', ['Unknown'])[0]
     return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, companies=companies, b64_dn=b64_dn)
 
