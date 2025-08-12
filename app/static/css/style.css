@@ -26,3 +26,17 @@ body {
 .person-meta-link:hover {
     text-decoration: none;
 }
+
+.sortable-header a {
+    color: white;
+    text-decoration: none;
+}
+
+.sortable-header a:hover {
+    color: #ddd;
+}
+
+.sortable-header .sort-indicator {
+    font-size: 0.8em;
+    margin-left: 4px;
+}

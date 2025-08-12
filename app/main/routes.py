@@ -28,6 +28,8 @@ def get_all_people_cached():
 def index():
     """Main index page. Now only shows a paginated list of all persons."""
     search_query = request.args.get('q', '')
+    sort_by = request.args.get('sort_by', 'sn') # Default sort by Surname
+    sort_order = request.args.get('sort_order', 'asc')
 
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
@@ -59,6 +61,13 @@ def index():
             if p.get('cn') and query in p['cn'][0].lower()
         ]
 
+    # Sort the entire list before pagination
+    if sort_by in get_config('LDAP_PERSON_ATTRIBUTES'):
+        all_people.sort(
+            key=lambda p: (p.get(sort_by)[0] if p.get(sort_by) else '').lower(),
+            reverse=(sort_order == 'desc')
+        )
+
     total_people = len(all_people)
 
     start_index = (page - 1) * page_size
@@ -85,15 +94,28 @@ def index():
                            total_pages=total_pages,
                            total_people=total_people,
                            page_numbers=page_numbers,
-                           company_dn_map=company_dn_map)
+                           company_dn_map=company_dn_map,
+                           sort_by=sort_by,
+                           sort_order=sort_order)
 
 @bp.route('/companies')
 def all_companies():
     """New page to display a paginated list of all companies."""
+    sort_by = request.args.get('sort_by', 'o') # Default sort by Company name
+    sort_order = request.args.get('sort_order', 'asc')
+
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_attrs = get_config('LDAP_COMPANY_ATTRIBUTES')
     company_filter = f'(objectClass={company_class})'
     all_companies = search_ldap(company_filter, company_attrs)
+
+    # Sort the entire list before pagination
+    if sort_by in company_attrs:
+        all_companies.sort(
+            key=lambda c: (c.get(sort_by)[0] if c.get(sort_by) else '').lower(),
+            reverse=(sort_order == 'desc')
+        )
+
     total_companies = len(all_companies)
 
     try:
@@ -119,7 +141,9 @@ def all_companies():
                            companies=companies_on_page,
                            page=page,
                            total_pages=total_pages,
-                           page_numbers=page_numbers)
+                           page_numbers=page_numbers,
+                           sort_by=sort_by,
+                           sort_order=sort_order)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
