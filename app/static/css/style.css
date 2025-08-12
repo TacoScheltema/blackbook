@@ -17,3 +17,12 @@ body {
     font-size: 10px; /* Smaller font size for email and company */
     color: #6c757d; /* Bootstrap's standard muted text color */
 }
+
+.compact-list-item .person-meta a {
+    color: navy;
+    text-decoration: none;
+}
+
+.compact-list-item .person-meta a:hover {
+    text-decoration: none;
+}

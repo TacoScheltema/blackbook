@@ -37,7 +37,7 @@
                         <div class="person-name">{{ person.cn[0] if person.cn else 'N/A' }}</div>
                         <small class="person-meta">
                             {% if person.o and person.o[0] and company_dn_map.get(person.o[0]) %}
-                                <a href="{{ url_for('main.company_detail', b64_dn=company_dn_map[person.o[0]]|b64encode) }}" class="text-reset" onclick="event.stopPropagation();">{{ person.o[0] }}</a>
+                                <a href="{{ url_for('main.company_detail', b64_dn=company_dn_map[person.o[0]]|b64encode) }}" onclick="event.stopPropagation();">{{ person.o[0] }}</a>
                             {% else %}
                                 {{ (person.o[0] if person.o else '') }}
                             {% endif %}
@@ -45,13 +45,13 @@
                     </div>
                     <small class="person-meta">
                         {% if person.mail and person.mail[0] %}
-                            <a href="mailto:{{ person.mail[0] }}" class="text-reset" onclick="event.stopPropagation();">{{ person.mail[0] }}</a>
+                            <a href="mailto:{{ person.mail[0] }}" onclick="event.stopPropagation();">{{ person.mail[0] }}</a>
                         {% else %}
                             No email
                         {% endif %}
                         |
                         {% if person.telephoneNumber and person.telephoneNumber[0] %}
-                            <a href="callto:{{ person.telephoneNumber[0] }}" class="text-reset" onclick="event.stopPropagation();">{{ person.telephoneNumber[0] }}</a>
+                            <a href="callto:{{ person.telephoneNumber[0] }}" onclick="event.stopPropagation();">{{ person.telephoneNumber[0] }}</a>
                         {% else %}
                             No phone
                         {% endif %}
