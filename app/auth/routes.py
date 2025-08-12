@@ -1,6 +1,6 @@
 from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_user, logout_user, current_user
-from werkzeug.urls import url_parse
+from urllib.parse import urlparse
 from app import db, oauth
 from app.auth import bp
 from app.models import User
@@ -39,7 +39,7 @@ def login():
         if user:
             login_user(user, remember=True)
             next_page = request.args.get('next')
-            if not next_page or url_parse(next_page).netloc != '':
+            if not next_page or urlparse(next_page).netloc != '':
                 next_page = url_for('main.index')
             return redirect(next_page)
 
