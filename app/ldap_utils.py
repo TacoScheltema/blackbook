@@ -43,9 +43,9 @@ def search_ldap(filter_str, attributes, size_limit=0):
     conn = get_ldap_connection()
     if not conn:
         return []
-
+    
     base_dn = current_app.config['LDAP_BASE_DN']
-
+    
     try:
         conn.search(
             search_base=base_dn,
@@ -77,7 +77,7 @@ def get_entry_by_dn(dn, attributes):
     conn = get_ldap_connection()
     if not conn:
         return None
-
+    
     try:
         conn.search(
             search_base=dn,
@@ -107,7 +107,7 @@ def add_ldap_entry(dn, object_classes, attributes):
     conn = get_ldap_connection()
     if not conn:
         return False
-
+    
     try:
         success = conn.add(dn, object_class=object_classes, attributes=attributes)
         if not success:
@@ -135,7 +135,7 @@ def modify_ldap_entry(dn, changes):
     conn = get_ldap_connection()
     if not conn:
         return False
-
+    
     try:
         success = conn.modify(dn, changes)
         if not success:

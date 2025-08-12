@@ -14,7 +14,7 @@
                     <label for="{{ attr_name }}" class="form-label" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ attr_name }}">
                         {{ display_name }}
                     </label>
-
+                    
                     {% if attr_name == 'o' %}
                         <input class="form-control" list="company-options" id="o" name="o" value="{{ (person.o[0] if person.o else '') }}">
                         <datalist id="company-options">
