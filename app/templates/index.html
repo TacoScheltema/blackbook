@@ -87,6 +87,11 @@
                 <div class="list-group-item">No companies found.</div>
             {% endif %}
         </div>
+        {% if total_companies > 20 %}
+        <div class="text-center mt-2">
+            <a href="{{ url_for('main.all_companies') }}">View all {{ total_companies }} companies...</a>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

@@ -9,7 +9,7 @@ load_dotenv(os.path.join(basedir, '.env'))
 class Config:
     """
     Main configuration class.
-    
+
     Loads settings from environment variables for security and flexibility.
     """
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'a-very-secret-key-that-you-should-change'
@@ -57,6 +57,6 @@ class Config:
             ('l', 'City'),
             ('postalCode', 'Postal Code')
         ])
-    
+
     LDAP_PERSON_ATTRIBUTES = list(LDAP_ATTRIBUTE_MAP.keys())
 

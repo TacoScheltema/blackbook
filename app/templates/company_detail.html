@@ -11,11 +11,11 @@
 {% block content %}
 <div class="card shadow-sm">
     <div class="card-header bg-dark text-white">
-        <h1 class="my-2">{{ company.o[0] if company.o else 'Company Details' }}</h1>
+        <h1 class="my-2">{{ (company.o[0] if company.o else 'Company Details') }}</h1>
     </div>
     <div class="card-body">
         <h5 class="card-title">Description</h5>
-        <p class="card-text">{{ company.description[0] if company.description else 'N/A' }}</p>
+        <p class="card-text">{{ (company.description[0] if company.description else 'N/A') }}</p>
 
         <h5 class="card-title mt-4">Address</h5>
         <p class="card-text">
@@ -23,7 +23,7 @@
                 {{ company.street[0] }}<br>
             {% endif %}
             {% if company.l and company.l[0] %}
-                {{ company.l[0] }}{% if company.st and company.st[0] %}, {{ company.st[0] }}{% endif %} {{ company.postalCode[0] if company.postalCode and company.postalCode[0] }}
+                {{ company.l[0] }}{% if company.st and company.st[0] %}, {{ company.st[0] }}{% endif %} {{ (company.postalCode[0] if company.postalCode and company.postalCode[0]) }}
             {% else %}
                 N/A
             {% endif %}

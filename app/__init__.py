@@ -3,7 +3,7 @@ from flask import Flask
 from flask_caching import Cache
 from config import Config
 
-## Initialize the cache object. It will be configured with the app in the factory.
+# Initialize the cache object. It will be configured with the app in the factory.
 cache = Cache()
 
 def b64encode_filter(s):
