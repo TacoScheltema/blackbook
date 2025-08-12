@@ -60,3 +60,13 @@ class Config:
 
     LDAP_PERSON_ATTRIBUTES = list(LDAP_ATTRIBUTE_MAP.keys())
 
+    # --- Pagination Configuration ---
+    PAGE_SIZE_OPTIONS_STR = os.environ.get('PAGE_SIZE_OPTIONS', '20,30,50')
+    try:
+        PAGE_SIZE_OPTIONS = [int(s.strip()) for s in PAGE_SIZE_OPTIONS_STR.split(',')]
+    except (ValueError, IndexError):
+        print("WARNING: PAGE_SIZE_OPTIONS is malformed. Using default.")
+        PAGE_SIZE_OPTIONS = [20, 30, 50]
+
+    # The default page size will be the first option in the list.
+    DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0] if PAGE_SIZE_OPTIONS else 20
