@@ -8,6 +8,6 @@ Flask-Caching
 Flask-Login
 Flask-SQLAlchemy
 Authlib
-Requests
 # Werkzeug is installed with Flask, but we specify it for password hashing consistency
 Werkzeug
+Requests

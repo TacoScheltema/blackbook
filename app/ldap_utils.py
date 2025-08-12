@@ -1,46 +1,56 @@
 import ldap3
-# Only the base LDAPException is needed for connection errors.
-# Operational errors are handled by checking the connection result.
 from ldap3.core.exceptions import LDAPException
 from flask import current_app, flash
 
-def get_ldap_connection():
+def get_ldap_connection(user_dn=None, password=None, read_only=False):
     """
-    Establishes a connection to the LDAP server using settings from the app config.
+    Establishes a connection to the LDAP server.
+    Can bind with the admin user from config or a specific user for authentication.
     """
+    server_uri = current_app.config.get('LDAP_SERVER')
+    use_ssl = current_app.config.get('LDAP_USE_SSL', False)
+
+    # If no user is provided, use the admin bind credentials from the config
+    if user_dn is None:
+        user_dn = current_app.config.get('LDAP_BIND_DN')
+        password = current_app.config.get('LDAP_BIND_PASSWORD')
+
     try:
-        use_ssl = current_app.config.get('LDAP_USE_SSL', False)
-        server = ldap3.Server(
-            current_app.config['LDAP_SERVER'],
-            get_info=ldap3.ALL,
-            use_ssl=use_ssl
-        )
-        # raise_exceptions is False by default, which is the correct
-        # pattern for checking conn.result after an operation.
+        server = ldap3.Server(server_uri, get_info=ldap3.ALL, use_ssl=use_ssl)
         connection = ldap3.Connection(
             server,
-            user=current_app.config['LDAP_BIND_DN'],
-            password=current_app.config['LDAP_BIND_PASSWORD'],
+            user=user_dn,
+            password=password,
             auto_bind=True,
-            read_only=False
+            read_only=read_only
         )
         return connection
     except LDAPException as e:
-        print(f"Failed to connect to LDAP server: {e}")
-        flash('Could not connect to the LDAP server.', 'danger')
+        print(f"Failed to connect or bind to LDAP server: {e}")
         return None
+
+def authenticate_ldap_user(username, password):
+    """
+    Attempts to bind to the LDAP server with a given username and password.
+    Returns True if successful, False otherwise.
+    """
+    # We need to construct the user's full DN to bind.
+    # This is a common pattern, but might need adjustment for your specific LDAP schema.
+    # e.g., "uid=<username>,ou=people,dc=example,dc=com"
+    base_dn = current_app.config.get('LDAP_BASE_DN')
+    user_dn = f"cn={username},{base_dn}" # This assumes users are under the base DN with a CN. Adjust if needed.
+
+    conn = get_ldap_connection(user_dn=user_dn, password=password)
+    if conn:
+        conn.unbind()
+        return True
+    return False
 
 def search_ldap(filter_str, attributes, size_limit=0):
     """
-    Performs a search on the LDAP directory.
-    Pagination is handled in the route by slicing the full result set.
-
-    :param filter_str: The LDAP search filter string.
-    :param attributes: A list of attributes to retrieve for each entry.
-    :param size_limit: The maximum number of entries to return (0 for no limit).
-    :return: A list of entry dictionaries or an empty list on error.
+    Performs a search on the LDAP directory using the admin credentials.
     """
-    conn = get_ldap_connection()
+    conn = get_ldap_connection(read_only=True)
     if not conn:
         return []
 
@@ -55,10 +65,8 @@ def search_ldap(filter_str, attributes, size_limit=0):
         )
         results = []
         for entry in conn.entries:
-            # Convert ldap3 entry object to a more usable dictionary
             result_dict = {'dn': entry.entry_dn}
             for attr in attributes:
-                # Store all values for an attribute in a list.
                 result_dict[attr] = entry[attr].values if entry[attr] else []
             results.append(result_dict)
         return results
@@ -74,7 +82,7 @@ def get_entry_by_dn(dn, attributes):
     """
     Retrieves a single entry by its Distinguished Name (DN).
     """
-    conn = get_ldap_connection()
+    conn = get_ldap_connection(read_only=True)
     if not conn:
         return None
 
