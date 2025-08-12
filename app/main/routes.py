@@ -7,9 +7,6 @@ from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_
 # Import the cache object we created in app/__init__.py
 from app import cache
 
-# Added 'countryCode' to the list of attributes to fetch for companies
-COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode', 'countryCode']
-
 def get_config(key):
     """Helper to safely get config values."""
     return current_app.config.get(key, '')
@@ -92,9 +89,9 @@ def index():
 def all_companies():
     """New page to display a paginated list of all companies."""
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
+    company_attrs = get_config('LDAP_COMPANY_ATTRIBUTES')
     company_filter = f'(objectClass={company_class})'
-    # Fetch with the new attributes for the table view
-    all_companies = search_ldap(company_filter, ['o', 'street', 'l', 'countryCode'])
+    all_companies = search_ldap(company_filter, company_attrs)
     total_companies = len(all_companies)
 
     try:
@@ -102,7 +99,7 @@ def all_companies():
     except ValueError:
         page = 1
 
-    PAGE_SIZE = 20 # A fixed page size for the company list
+    PAGE_SIZE = 20
     start_index = (page - 1) * PAGE_SIZE
     end_index = start_index + PAGE_SIZE
     companies_on_page = all_companies[start_index:end_index]
@@ -165,7 +162,8 @@ def company_detail(b64_dn):
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
-    company = get_entry_by_dn(dn, COMPANY_ATTRS)
+    company_attrs = get_config('LDAP_COMPANY_ATTRIBUTES')
+    company = get_entry_by_dn(dn, company_attrs)
     if not company:
         abort(404)
 
