@@ -1,10 +1,17 @@
 import base64
 from flask import Flask
 from flask_caching import Cache
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+from authlib.integrations.flask_client import OAuth
 from config import Config
 
-# Initialize the cache object. It will be configured with the app in the factory.
+# Initialize extensions
 cache = Cache()
+db = SQLAlchemy()
+login_manager = LoginManager()
+login_manager.login_view = 'auth.login' # Redirect to this page if user is not logged in
+oauth = OAuth()
 
 def b64encode_filter(s):
     """Jinja2 filter to base64 encode a string."""
@@ -19,30 +26,61 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Initialize the cache with the application configuration
+    # Initialize extensions with the app
     cache.init_app(app)
+    db.init_app(app)
+    login_manager.init_app(app)
+    oauth.init_app(app)
+
+    # --- Register OAuth Providers ---
+    # Google
+    if app.config['GOOGLE_CLIENT_ID'] and app.config['GOOGLE_CLIENT_SECRET']:
+        oauth.register(
+            name='google',
+            client_id=app.config['GOOGLE_CLIENT_ID'],
+            client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            client_kwargs={'scope': 'openid email profile'}
+        )
+
+    # Keycloak
+    if app.config['KEYCLOAK_CLIENT_ID'] and app.config['KEYCLOAK_SERVER_URL']:
+        oauth.register(
+            name='keycloak',
+            client_id=app.config['KEYCLOAK_CLIENT_ID'],
+            client_secret=app.config['KEYCLOAK_CLIENT_SECRET'],
+            server_metadata_url=f"{app.config['KEYCLOAK_SERVER_URL']}/.well-known/openid-configuration",
+            client_kwargs={'scope': 'openid email profile'}
+        )
+
+    # Authentik
+    if app.config['AUTHENTIK_CLIENT_ID'] and app.config['AUTHENTIK_SERVER_URL']:
+        oauth.register(
+            name='authentik',
+            client_id=app.config['AUTHENTIK_CLIENT_ID'],
+            client_secret=app.config['AUTHENTIK_CLIENT_SECRET'],
+            server_metadata_url=f"{app.config['AUTHENTIK_SERVER_URL']}/.well-known/openid-configuration",
+            client_kwargs={'scope': 'openid email profile'}
+        )
+
 
     # Make the config available to all templates.
     @app.context_processor
     def inject_config():
         return dict(config=app.config)
 
-    # Register custom Jinja2 filter for base64 encoding DNs in URLs
+    # Register custom Jinja2 filter
     app.jinja_env.filters['b64encode'] = b64encode_filter
 
     # Register blueprints
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
 
-    # A simple check to ensure LDAP configuration is present
-    if not all([app.config['LDAP_SERVER'], app.config['LDAP_BASE_DN']]):
-        @app.route('/')
-        def missing_config():
-            return """
-            <h1>Configuration Error</h1>
-            <p>LDAP_SERVER and LDAP_BASE_DN must be set in your environment variables.</p>
-            <p>Please create a <code>.env</code> file based on <code>.env.example</code>.</p>
-            """, 500
+    from app.auth import bp as auth_bp
+    app.register_blueprint(auth_bp)
+
+    with app.app_context():
+        db.create_all()
 
     return app
 
