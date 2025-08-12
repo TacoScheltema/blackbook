@@ -37,7 +37,9 @@
                         <div class="person-name">{{ person.cn[0] if person.cn else 'N/A' }}</div>
                         <small class="person-meta">{{ (person.o[0] if person.o else '') }}</small>
                     </div>
-                    <small class="person-meta">{{ (person.mail[0] if person.mail else 'No email') }}</small>
+                    <small class="person-meta">
+                        {{ (person.mail[0] if person.mail else 'No email') }} | {{ (person.telephoneNumber[0] if person.telephoneNumber else 'No phone') }}
+                    </small>
                 </a>
                 {% endfor %}
             {% else %}
