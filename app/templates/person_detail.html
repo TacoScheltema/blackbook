@@ -31,6 +31,8 @@
                         {% set values = person[attr_name] %}
                         {% if attr_name == 'mail' and values[0] %}
                             <a href="mailto:{{ values[0] }}">{{ values[0] }}</a>
+                        {% elif attr_name == 'telephoneNumber' and values[0] %}
+                            <a href="callto:{{ values[0] }}">{{ values[0] }}</a>
                         {% else %}
                             {{ values | join(', ') }}
                         {% endif %}

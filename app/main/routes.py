@@ -35,6 +35,9 @@ def index():
     all_companies = search_ldap(company_filter, ['o'])
     total_companies = len(all_companies)
 
+    # Create a map from company name to its DN for linking from the person list
+    company_dn_map = {c['o'][0]: c['dn'] for c in all_companies if c.get('o') and c['o'][0]}
+
     try:
         cpage = int(request.args.get('cpage', 1))
     except ValueError:
@@ -109,7 +112,8 @@ def index():
                            page_numbers=page_numbers,
                            cpage=cpage,
                            total_company_pages=total_company_pages,
-                           company_page_numbers=company_page_numbers)
+                           company_page_numbers=company_page_numbers,
+                           company_dn_map=company_dn_map)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
