@@ -31,7 +31,10 @@ def extract_files_from_data_file(data_file_path, target_dir):
                 continue  # Skip '# end file'
 
         elif current_path and not line.startswith("# end file"):
-            buffer.append(line)
+            if line.stripped() == "":
+                buffer.append("\n")
+            else:
+                buffer.append(line)
 
     # Write last file if not closed
     if current_path and buffer:
