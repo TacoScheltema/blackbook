@@ -7,6 +7,8 @@ from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_
 # Import the cache object we created in app/__init__.py
 from app import cache
 
+COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode', 'countryCode']
+
 def get_config(key):
     """Helper to safely get config values."""
     return current_app.config.get(key, '')
