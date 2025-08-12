@@ -9,15 +9,21 @@
             </div>
             <div class="card-body">
                 <!-- Local and LDAP Login Tabs -->
+                {% if config.ENABLE_LOCAL_LOGIN or config.ENABLE_LDAP_LOGIN %}
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    {% if config.ENABLE_LOCAL_LOGIN %}
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="local-tab" data-bs-toggle="tab" data-bs-target="#local" type="button" role="tab" aria-controls="local" aria-selected="true">Local Account</button>
                     </li>
+                    {% endif %}
+                    {% if config.ENABLE_LDAP_LOGIN %}
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="ldap-tab" data-bs-toggle="tab" data-bs-target="#ldap" type="button" role="tab" aria-controls="ldap" aria-selected="false">LDAP</button>
+                        <button class="nav-link {% if not config.ENABLE_LOCAL_LOGIN %}active{% endif %}" id="ldap-tab" data-bs-toggle="tab" data-bs-target="#ldap" type="button" role="tab" aria-controls="ldap" aria-selected="false">LDAP</button>
                     </li>
+                    {% endif %}
                 </ul>
                 <div class="tab-content p-3 border border-top-0 rounded-bottom" id="myTabContent">
+                    {% if config.ENABLE_LOCAL_LOGIN %}
                     <!-- Local Login Form -->
                     <div class="tab-pane fade show active" id="local" role="tabpanel" aria-labelledby="local-tab">
                         <form action="" method="post" novalidate>
@@ -33,8 +39,10 @@
                             <button type="submit" class="btn btn-primary w-100">Sign In with Local Account</button>
                         </form>
                     </div>
+                    {% endif %}
+                    {% if config.ENABLE_LDAP_LOGIN %}
                     <!-- LDAP Login Form -->
-                    <div class="tab-pane fade" id="ldap" role="tabpanel" aria-labelledby="ldap-tab">
+                    <div class="tab-pane fade {% if not config.ENABLE_LOCAL_LOGIN %}show active{% endif %}" id="ldap" role="tabpanel" aria-labelledby="ldap-tab">
                         <form action="" method="post" novalidate>
                             <input type="hidden" name="auth_type" value="ldap">
                             <div class="mb-3">
@@ -48,7 +56,9 @@
                             <button type="submit" class="btn btn-primary w-100">Sign In with LDAP</button>
                         </form>
                     </div>
+                    {% endif %}
                 </div>
+                {% endif %}
 
                 <!-- SSO Providers -->
                 <div class="mt-4 text-center">

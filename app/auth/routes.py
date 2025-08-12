@@ -1,4 +1,4 @@
-from flask import render_template, flash, redirect, url_for, request
+from flask import render_template, flash, redirect, url_for, request, current_app
 from flask_login import login_user, logout_user, current_user
 from urllib.parse import urlparse
 from app import db, oauth
@@ -16,6 +16,14 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
+        # Check if the selected login method is disabled
+        if auth_type == 'local' and not current_app.config['ENABLE_LOCAL_LOGIN']:
+            flash('Local login is disabled.', 'warning')
+            return redirect(url_for('auth.login'))
+        if auth_type == 'ldap' and not current_app.config['ENABLE_LDAP_LOGIN']:
+            flash('LDAP login is disabled.', 'warning')
+            return redirect(url_for('auth.login'))
+
         user = None
 
         if auth_type == 'local':
@@ -26,7 +34,6 @@ def login():
 
         elif auth_type == 'ldap':
             if authenticate_ldap_user(username, password):
-                # For LDAP users, we create a local user record on-the-fly if one doesn't exist
                 user = User.query.filter_by(username=username, auth_source='ldap').first()
                 if not user:
                     user = User(username=username, auth_source='ldap')
@@ -69,12 +76,10 @@ def authorize(provider):
     user_info = token.get('userinfo')
 
     if user_info:
-        # Use the 'sub' (subject) claim as a unique ID for SSO users
         sso_user_id = user_info['sub']
         user = User.query.filter_by(username=sso_user_id, auth_source='sso').first()
 
         if not user:
-            # Create a new user for this SSO identity
             user = User(
                 username=sso_user_id, 
                 email=user_info.get('email'),
