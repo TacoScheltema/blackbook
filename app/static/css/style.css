@@ -18,11 +18,12 @@ body {
     color: #6c757d; /* Bootstrap's standard muted text color */
 }
 
-.compact-list-item .person-meta a {
+.person-meta-link {
     color: navy;
     text-decoration: none;
 }
 
-.compact-list-item .person-meta a:hover {
+.person-meta-link:hover {
     text-decoration: none;
 }
+
