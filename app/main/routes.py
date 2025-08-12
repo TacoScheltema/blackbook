@@ -7,8 +7,6 @@ from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_
 # Import the cache object we created in app/__init__.py
 from app import cache
 
-COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode']
-
 def get_config(key):
     """Helper to safely get config values."""
     return current_app.config.get(key, '')
@@ -17,8 +15,6 @@ def get_config(key):
 def get_all_people_cached():
     """
     A cached function to get all people from LDAP.
-    This function's result will be stored in the cache. The cache key is
-    the function name. It will only be re-run when the cache times out.
     """
     print("CACHE MISS: Fetching all people from LDAP server...")
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
@@ -28,33 +24,10 @@ def get_all_people_cached():
 
 @bp.route('/')
 def index():
-    """Main index page. Lists all companies and a paginated list of all persons."""
-    # --- Companies List (with pagination) ---
-    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
-    company_filter = f'(objectClass={company_class})'
-    all_companies = search_ldap(company_filter, ['o'])
-    total_companies = len(all_companies)
-
-    try:
-        cpage = int(request.args.get('cpage', 1))
-    except ValueError:
-        cpage = 1
-
-    COMPANY_PAGE_SIZE = 15
-    c_start_index = (cpage - 1) * COMPANY_PAGE_SIZE
-    c_end_index = c_start_index + COMPANY_PAGE_SIZE
-    companies_on_page = all_companies[c_start_index:c_end_index]
-    total_company_pages = math.ceil(total_companies / COMPANY_PAGE_SIZE)
-
-    C_PAGES_TO_SHOW = 4
-    c_start_page = max(1, cpage - (C_PAGES_TO_SHOW // 2))
-    c_end_page = min(total_company_pages, c_start_page + C_PAGES_TO_SHOW - 1)
-    if c_end_page - c_start_page + 1 < C_PAGES_TO_SHOW:
-        c_start_page = max(1, c_end_page - C_PAGES_TO_SHOW + 1)
-    company_page_numbers = range(c_start_page, c_end_page + 1)
-
-    # --- Persons List (with caching and configurable pagination) ---
+    """Main index page. Now only shows a paginated list of all persons."""
     search_query = request.args.get('q', '')
+    sort_by = request.args.get('sort_by', 'sn') # Default sort by Surname
+    sort_order = request.args.get('sort_order', 'asc')
 
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
@@ -73,12 +46,25 @@ def index():
 
     all_people = get_all_people_cached()
 
+    # Create a map from company name to its DN for linking from the person list
+    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
+    company_filter = f'(objectClass={company_class})'
+    all_companies = search_ldap(company_filter, ['o'])
+    company_dn_map = {c['o'][0]: c['dn'] for c in all_companies if c.get('o') and c['o'][0]}
+
     if search_query:
         query = search_query.lower()
         all_people = [
             p for p in all_people 
             if p.get('cn') and query in p['cn'][0].lower()
         ]
+
+    # Sort the entire list before pagination
+    if sort_by in get_config('LDAP_PERSON_ATTRIBUTES'):
+        all_people.sort(
+            key=lambda p: (p.get(sort_by)[0] if p.get(sort_by) else '').lower(),
+            reverse=(sort_order == 'desc')
+        )
 
     total_people = len(all_people)
 
@@ -99,7 +85,6 @@ def index():
 
     return render_template('index.html', 
                            title='Address Book', 
-                           companies=companies_on_page, 
                            people=people_on_page,
                            search_query=search_query,
                            page=page,
@@ -107,9 +92,56 @@ def index():
                            total_pages=total_pages,
                            total_people=total_people,
                            page_numbers=page_numbers,
-                           cpage=cpage,
-                           total_company_pages=total_company_pages,
-                           company_page_numbers=company_page_numbers)
+                           company_dn_map=company_dn_map,
+                           sort_by=sort_by,
+                           sort_order=sort_order)
+
+@bp.route('/companies')
+def all_companies():
+    """New page to display a paginated list of all companies."""
+    sort_by = request.args.get('sort_by', 'o') # Default sort by Company name
+    sort_order = request.args.get('sort_order', 'asc')
+
+    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
+    company_attrs = get_config('LDAP_COMPANY_ATTRIBUTES')
+    company_filter = f'(objectClass={company_class})'
+    all_companies = search_ldap(company_filter, company_attrs)
+
+    # Sort the entire list before pagination
+    if sort_by in company_attrs:
+        all_companies.sort(
+            key=lambda c: (c.get(sort_by)[0] if c.get(sort_by) else '').lower(),
+            reverse=(sort_order == 'desc')
+        )
+
+    total_companies = len(all_companies)
+
+    try:
+        page = int(request.args.get('page', 1))
+    except ValueError:
+        page = 1
+
+    PAGE_SIZE = 20
+    start_index = (page - 1) * PAGE_SIZE
+    end_index = start_index + PAGE_SIZE
+    companies_on_page = all_companies[start_index:end_index]
+    total_pages = math.ceil(total_companies / PAGE_SIZE)
+
+    PAGES_TO_SHOW = 6
+    start_page = max(1, page - (PAGES_TO_SHOW // 2))
+    end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
+    if end_page - start_page + 1 < PAGES_TO_SHOW:
+        start_page = max(1, end_page - PAGES_TO_SHOW + 1)
+    page_numbers = range(start_page, end_page + 1)
+
+    return render_template('all_companies.html',
+                           title='All Companies',
+                           companies=companies_on_page,
+                           page=page,
+                           total_pages=total_pages,
+                           page_numbers=page_numbers,
+                           sort_by=sort_by,
+                           sort_order=sort_order)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
@@ -154,7 +186,8 @@ def company_detail(b64_dn):
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
-    company = get_entry_by_dn(dn, COMPANY_ATTRS)
+    company_attrs = get_config('LDAP_COMPANY_ATTRIBUTES')
+    company = get_entry_by_dn(dn, company_attrs)
     if not company:
         abort(404)
 

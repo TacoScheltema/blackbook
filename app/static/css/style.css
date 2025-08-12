@@ -17,3 +17,26 @@ body {
     font-size: 10px; /* Smaller font size for email and company */
     color: #6c757d; /* Bootstrap's standard muted text color */
 }
+
+.person-meta-link {
+    color: navy;
+    text-decoration: none;
+}
+
+.person-meta-link:hover {
+    text-decoration: none;
+}
+
+.sortable-header a {
+    color: white;
+    text-decoration: none;
+}
+
+.sortable-header a:hover {
+    color: #ddd;
+}
+
+.sortable-header .sort-indicator {
+    font-size: 0.8em;
+    margin-left: 4px;
+}

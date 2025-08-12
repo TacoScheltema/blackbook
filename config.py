@@ -9,7 +9,7 @@ load_dotenv(os.path.join(basedir, '.env'))
 class Config:
     """
     Main configuration class.
-    
+
     Loads settings from environment variables for security and flexibility.
     """
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'a-very-secret-key-that-you-should-change'
@@ -57,8 +57,33 @@ class Config:
             ('l', 'City'),
             ('postalCode', 'Postal Code')
         ])
-    
+
     LDAP_PERSON_ATTRIBUTES = list(LDAP_ATTRIBUTE_MAP.keys())
+
+    # --- Company Attribute Configuration ---
+    LDAP_COMPANY_ATTRIBUTE_MAP_STR = os.environ.get('LDAP_COMPANY_ATTRIBUTE_MAP')
+    if LDAP_COMPANY_ATTRIBUTE_MAP_STR:
+        try:
+            LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict(
+                (pair.split(':')[0].strip(), pair.split(':')[1].strip())
+                for pair in LDAP_COMPANY_ATTRIBUTE_MAP_STR.split(',')
+            )
+        except IndexError:
+            print("WARNING: LDAP_COMPANY_ATTRIBUTE_MAP is malformed. Using default.")
+            LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict()
+    else:
+        LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict()
+
+    if not LDAP_COMPANY_ATTRIBUTE_MAP:
+        LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict([
+            ('o', 'Company'),
+            ('street', 'Street'),
+            ('postalCode', 'Postcode'),
+            ('l', 'City')
+        ])
+
+    LDAP_COMPANY_ATTRIBUTES = list(LDAP_COMPANY_ATTRIBUTE_MAP.keys())
+
 
     # --- Pagination Configuration ---
     PAGE_SIZE_OPTIONS_STR = os.environ.get('PAGE_SIZE_OPTIONS', '20,30,50')
@@ -68,6 +93,5 @@ class Config:
         print("WARNING: PAGE_SIZE_OPTIONS is malformed. Using default.")
         PAGE_SIZE_OPTIONS = [20, 30, 50]
 
-    # The default page size will be the first option in the list.
     DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0] if PAGE_SIZE_OPTIONS else 20
 
