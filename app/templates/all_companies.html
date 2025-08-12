@@ -1,21 +1,38 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center">
-    <h1>All Companies</h1>
-    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to Main Page</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>All Companies</h2>
+    <a href="{{ url_for('main.add_company') }}" class="btn btn-primary">+ Add Company</a>
 </div>
 
-<div class="list-group shadow-sm mt-3">
-    {% if companies %}
-        {% for company in companies %}
-        <a href="{{ url_for('main.company_detail', b64_dn=company.dn|b64encode) }}" class="list-group-item list-group-item-action">
-            {{ company.o[0] if company.o else 'Unnamed Company' }}
-        </a>
-        {% endfor %}
-    {% else %}
-        <div class="list-group-item">No companies found.</div>
-    {% endif %}
+<div class="table-responsive shadow-sm rounded">
+    <table class="table table-striped table-hover table-sm mb-0 align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col">Company</th>
+                <th scope="col">Street</th>
+                <th scope="col">City</th>
+                <th scope="col">Country</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if companies %}
+                {% for company in companies %}
+                <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.company_detail', b64_dn=company.dn|b64encode) }}';">
+                    <td><strong>{{ company.o[0] if company.o else 'N/A' }}</strong></td>
+                    <td>{{ company.street[0] if company.street else '' }}</td>
+                    <td>{{ company.l[0] if company.l else '' }}</td>
+                    <td>{{ company.countryCode[0] if company.countryCode else '' }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="4" class="text-center p-4">No companies found.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
 </div>
 
 <!-- Pagination Controls for Companies -->
@@ -36,6 +53,5 @@
     </ul>
 </nav>
 {% endif %}
-
 {% endblock %}
 

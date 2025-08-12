@@ -11,7 +11,8 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">LDAP Address Book</a>
-            <div class="ms-auto">
+            <div class="ms-auto d-flex align-items-center">
+                <a href="{{ url_for('main.all_companies') }}" class="btn btn-outline-light me-2">Companies</a>
                 {% block navbar_buttons %}{% endblock %}
             </div>
         </div>

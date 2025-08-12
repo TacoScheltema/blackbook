@@ -7,7 +7,8 @@ from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_
 # Import the cache object we created in app/__init__.py
 from app import cache
 
-COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode']
+# Added 'countryCode' to the list of attributes to fetch for companies
+COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode', 'countryCode']
 
 def get_config(key):
     """Helper to safely get config values."""
@@ -17,8 +18,6 @@ def get_config(key):
 def get_all_people_cached():
     """
     A cached function to get all people from LDAP.
-    This function's result will be stored in the cache. The cache key is
-    the function name. It will only be re-run when the cache times out.
     """
     print("CACHE MISS: Fetching all people from LDAP server...")
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
@@ -28,35 +27,7 @@ def get_all_people_cached():
 
 @bp.route('/')
 def index():
-    """Main index page. Lists all companies and a paginated list of all persons."""
-    # --- Companies List (with pagination) ---
-    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
-    company_filter = f'(objectClass={company_class})'
-    all_companies = search_ldap(company_filter, ['o'])
-    total_companies = len(all_companies)
-
-    # Create a map from company name to its DN for linking from the person list
-    company_dn_map = {c['o'][0]: c['dn'] for c in all_companies if c.get('o') and c['o'][0]}
-
-    try:
-        cpage = int(request.args.get('cpage', 1))
-    except ValueError:
-        cpage = 1
-
-    COMPANY_PAGE_SIZE = 15
-    c_start_index = (cpage - 1) * COMPANY_PAGE_SIZE
-    c_end_index = c_start_index + COMPANY_PAGE_SIZE
-    companies_on_page = all_companies[c_start_index:c_end_index]
-    total_company_pages = math.ceil(total_companies / COMPANY_PAGE_SIZE)
-
-    C_PAGES_TO_SHOW = 4
-    c_start_page = max(1, cpage - (C_PAGES_TO_SHOW // 2))
-    c_end_page = min(total_company_pages, c_start_page + C_PAGES_TO_SHOW - 1)
-    if c_end_page - c_start_page + 1 < C_PAGES_TO_SHOW:
-        c_start_page = max(1, c_end_page - C_PAGES_TO_SHOW + 1)
-    company_page_numbers = range(c_start_page, c_end_page + 1)
-
-    # --- Persons List (with caching and configurable pagination) ---
+    """Main index page. Now only shows a paginated list of all persons."""
     search_query = request.args.get('q', '')
 
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
@@ -75,6 +46,12 @@ def index():
         page = 1
 
     all_people = get_all_people_cached()
+
+    # Create a map from company name to its DN for linking from the person list
+    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
+    company_filter = f'(objectClass={company_class})'
+    all_companies = search_ldap(company_filter, ['o'])
+    company_dn_map = {c['o'][0]: c['dn'] for c in all_companies if c.get('o') and c['o'][0]}
 
     if search_query:
         query = search_query.lower()
@@ -102,7 +79,6 @@ def index():
 
     return render_template('index.html', 
                            title='Address Book', 
-                           companies=companies_on_page, 
                            people=people_on_page,
                            search_query=search_query,
                            page=page,
@@ -110,10 +86,41 @@ def index():
                            total_pages=total_pages,
                            total_people=total_people,
                            page_numbers=page_numbers,
-                           cpage=cpage,
-                           total_company_pages=total_company_pages,
-                           company_page_numbers=company_page_numbers,
                            company_dn_map=company_dn_map)
+
+@bp.route('/companies')
+def all_companies():
+    """New page to display a paginated list of all companies."""
+    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
+    company_filter = f'(objectClass={company_class})'
+    # Fetch with the new attributes for the table view
+    all_companies = search_ldap(company_filter, ['o', 'street', 'l', 'countryCode'])
+    total_companies = len(all_companies)
+
+    try:
+        page = int(request.args.get('page', 1))
+    except ValueError:
+        page = 1
+
+    PAGE_SIZE = 20 # A fixed page size for the company list
+    start_index = (page - 1) * PAGE_SIZE
+    end_index = start_index + PAGE_SIZE
+    companies_on_page = all_companies[start_index:end_index]
+    total_pages = math.ceil(total_companies / PAGE_SIZE)
+
+    PAGES_TO_SHOW = 6
+    start_page = max(1, page - (PAGES_TO_SHOW // 2))
+    end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
+    if end_page - start_page + 1 < PAGES_TO_SHOW:
+        start_page = max(1, end_page - PAGES_TO_SHOW + 1)
+    page_numbers = range(start_page, end_page + 1)
+
+    return render_template('all_companies.html',
+                           title='All Companies',
+                           companies=companies_on_page,
+                           page=page,
+                           total_pages=total_pages,
+                           page_numbers=page_numbers)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
