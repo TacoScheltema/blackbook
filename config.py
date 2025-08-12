@@ -2,23 +2,21 @@ import os
 from dotenv import load_dotenv
 from collections import OrderedDict
 
-## Load environment variables from a .env file
+# Load environment variables from a .env file
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
     """
     Main configuration class.
-
+    
     Loads settings from environment variables for security and flexibility.
     """
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'a-very-secret-key-that-you-should-change'
     FLASK_DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
 
     # --- Caching Configuration ---
-    # Type of cache to use. 'SimpleCache' is an in-memory cache.
     CACHE_TYPE = 'SimpleCache'
-    # Default timeout for the cache, read from the environment variable.
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get('LDAP_CACHE_TIMEOUT', 300))
 
     # --- LDAP Configuration ---
@@ -59,7 +57,6 @@ class Config:
             ('l', 'City'),
             ('postalCode', 'Postal Code')
         ])
-
+    
     LDAP_PERSON_ATTRIBUTES = list(LDAP_ATTRIBUTE_MAP.keys())
-
 

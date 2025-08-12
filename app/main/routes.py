@@ -29,10 +29,29 @@ def get_all_people_cached():
 @bp.route('/')
 def index():
     """Main index page. Lists all companies and a paginated list of all persons."""
-    # --- Companies List (reverted to no pagination) ---
+    # --- Companies List (with pagination) ---
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_filter = f'(objectClass={company_class})'
-    companies = search_ldap(company_filter, ['o'], size_limit=200)
+    all_companies = search_ldap(company_filter, ['o'])
+    total_companies = len(all_companies)
+
+    try:
+        cpage = int(request.args.get('cpage', 1))
+    except ValueError:
+        cpage = 1
+    
+    COMPANY_PAGE_SIZE = 15
+    c_start_index = (cpage - 1) * COMPANY_PAGE_SIZE
+    c_end_index = c_start_index + COMPANY_PAGE_SIZE
+    companies_on_page = all_companies[c_start_index:c_end_index]
+    total_company_pages = math.ceil(total_companies / COMPANY_PAGE_SIZE)
+
+    C_PAGES_TO_SHOW = 4
+    c_start_page = max(1, cpage - (C_PAGES_TO_SHOW // 2))
+    c_end_page = min(total_company_pages, c_start_page + C_PAGES_TO_SHOW - 1)
+    if c_end_page - c_start_page + 1 < C_PAGES_TO_SHOW:
+        c_start_page = max(1, c_end_page - C_PAGES_TO_SHOW + 1)
+    company_page_numbers = range(c_start_page, c_end_page + 1)
 
     # --- Persons List (with caching and configurable pagination) ---
     search_query = request.args.get('q', '')
@@ -80,14 +99,17 @@ def index():
 
     return render_template('index.html', 
                            title='Address Book', 
-                           companies=companies, 
+                           companies=companies_on_page, 
                            people=people_on_page,
                            search_query=search_query,
                            page=page,
                            page_size=page_size,
                            total_pages=total_pages,
                            total_people=total_people,
-                           page_numbers=page_numbers)
+                           page_numbers=page_numbers,
+                           cpage=cpage,
+                           total_company_pages=total_company_pages,
+                           company_page_numbers=company_page_numbers)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
