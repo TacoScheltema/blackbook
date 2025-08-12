@@ -67,7 +67,7 @@ class Config:
     except (ValueError, IndexError):
         print("WARNING: PAGE_SIZE_OPTIONS is malformed. Using default.")
         PAGE_SIZE_OPTIONS = [20, 30, 50]
-    
+
     # The default page size will be the first option in the list.
     DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0] if PAGE_SIZE_OPTIONS else 20
 

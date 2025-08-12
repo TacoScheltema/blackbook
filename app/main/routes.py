@@ -29,14 +29,33 @@ def get_all_people_cached():
 @bp.route('/')
 def index():
     """Main index page. Lists all companies and a paginated list of all persons."""
-    # --- Companies List (remains the same) ---
+    # --- Companies List (with pagination) ---
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
     company_filter = f'(objectClass={company_class})'
-    companies = search_ldap(company_filter, ['o'], size_limit=200)
+    all_companies = search_ldap(company_filter, ['o'])
+    total_companies = len(all_companies)
+
+    try:
+        cpage = int(request.args.get('cpage', 1))
+    except ValueError:
+        cpage = 1
+
+    COMPANY_PAGE_SIZE = 15
+    c_start_index = (cpage - 1) * COMPANY_PAGE_SIZE
+    c_end_index = c_start_index + COMPANY_PAGE_SIZE
+    companies_on_page = all_companies[c_start_index:c_end_index]
+    total_company_pages = math.ceil(total_companies / COMPANY_PAGE_SIZE)
+
+    C_PAGES_TO_SHOW = 4
+    c_start_page = max(1, cpage - (C_PAGES_TO_SHOW // 2))
+    c_end_page = min(total_company_pages, c_start_page + C_PAGES_TO_SHOW - 1)
+    if c_end_page - c_start_page + 1 < C_PAGES_TO_SHOW:
+        c_start_page = max(1, c_end_page - C_PAGES_TO_SHOW + 1)
+    company_page_numbers = range(c_start_page, c_end_page + 1)
 
     # --- Persons List (with caching and configurable pagination) ---
     search_query = request.args.get('q', '')
-    
+
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
 
@@ -46,7 +65,7 @@ def index():
             page_size = default_page_size
     except ValueError:
         page_size = default_page_size
-        
+
     try:
         page = int(request.args.get('page', 1))
     except ValueError:
@@ -62,17 +81,17 @@ def index():
         ]
 
     total_people = len(all_people)
-    
+
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
     people_on_page = all_people[start_index:end_index]
-    
+
     total_pages = math.ceil(total_people / page_size)
 
     PAGES_TO_SHOW = 6
     start_page = max(1, page - (PAGES_TO_SHOW // 2))
     end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
-    
+
     if end_page - start_page + 1 < PAGES_TO_SHOW:
         start_page = max(1, end_page - PAGES_TO_SHOW + 1)
 
@@ -80,14 +99,17 @@ def index():
 
     return render_template('index.html', 
                            title='Address Book', 
-                           companies=companies, 
+                           companies=companies_on_page, 
                            people=people_on_page,
                            search_query=search_query,
                            page=page,
                            page_size=page_size,
                            total_pages=total_pages,
                            total_people=total_people,
-                           page_numbers=page_numbers)
+                           page_numbers=page_numbers,
+                           cpage=cpage,
+                           total_company_pages=total_company_pages,
+                           company_page_numbers=company_page_numbers)
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
@@ -102,7 +124,7 @@ def add_company():
         base_dn = get_config('LDAP_BASE_DN')
         new_dn = f"o={company_name},{base_dn}"
         object_classes = ['top', 'organization']
-        
+
         attributes = {
             'o': company_name,
             'description': request.form.get('description'),
@@ -156,12 +178,12 @@ def person_detail(b64_dn):
         dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
-        
+
     person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
     person = get_entry_by_dn(dn, person_attrs)
     if not person:
         abort(404)
-        
+
     person_name = person.get('cn', ['Unknown'])[0]
     return render_template('person_detail.html', title=person_name, person=person, b64_dn=b64_dn)
 
@@ -197,7 +219,7 @@ def edit_person(b64_dn):
         elif modify_ldap_entry(dn, changes):
             flash('Person details updated successfully!', 'success')
             cache.clear() # Clear the cache after a successful modification
-        
+
         return redirect(url_for('main.person_detail', b64_dn=b64_dn))
 
     company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
