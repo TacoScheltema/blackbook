@@ -2,12 +2,14 @@ import base64
 import ldap3
 import math
 from functools import wraps
-from flask import render_template, current_app, abort, request, flash, redirect, url_for
+from flask import Response, render_template, current_app, abort, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.main import bp
 from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
 from app.models import User
 from app import db, cache
+
+COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode', 'countryCode']
 
 def get_config(key):
     """Helper to safely get config values."""
@@ -235,6 +237,41 @@ def person_detail(b64_dn):
 
     person_name = person.get('cn', ['Unknown'])[0]
     return render_template('person_detail.html', title=person_name, person=person, b64_dn=b64_dn)
+
+@bp.route('/person/vcard/<b64_dn>')
+@login_required
+def person_vcard(b64_dn):
+    """Generates and returns a vCard file for a person."""
+    try:
+        dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
+    except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
+    person = get_entry_by_dn(dn, person_attrs)
+    if not person:
+        abort(404)
+
+    # Helper to safely get the first value of an attribute
+    get_val = lambda attr: (person.get(attr) or [''])[0]
+
+    vcard = f"""BEGIN:VCARD
+VERSION:3.0
+FN:{get_val('cn')}
+N:{get_val('sn')};{get_val('givenName')};;;
+ORG:{get_val('o')}
+EMAIL;TYPE=WORK,INTERNET:{get_val('mail')}
+TEL;TYPE=WORK,VOICE:{get_val('telephoneNumber')}
+ADR;TYPE=WORK:;;{get_val('street')};{get_val('l')};;{get_val('postalCode')};
+END:VCARD"""
+
+    filename = f"{get_val('cn').replace(' ', '_')}.vcf"
+
+    return Response(
+        vcard,
+        mimetype="text/vcard",
+        headers={"Content-disposition": f"attachment; filename={filename}"}
+    )
 
 @bp.route('/person/edit/<b64_dn>', methods=['GET', 'POST'])
 @login_required
