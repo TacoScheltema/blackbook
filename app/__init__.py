@@ -3,12 +3,14 @@ from flask import Flask, request, redirect, url_for
 from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
+from flask_migrate import Migrate
 from authlib.integrations.flask_client import OAuth
 from config import Config
 
 # Initialize extensions
 cache = Cache()
 db = SQLAlchemy()
+migrate = Migrate() # Initialize Migrate
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login' # Redirect to this page if user is not logged in
 oauth = OAuth()
@@ -18,22 +20,6 @@ def b64encode_filter(s):
     if isinstance(s, str):
         s = s.encode('utf-8')
     return base64.urlsafe_b64encode(s).decode('utf-8')
-
-def create_default_admin(app):
-    with app.app_context():
-        from app.models import User
-        # Check if local login is enabled and if the admin user doesn't exist
-        if app.config['ENABLE_LOCAL_LOGIN'] and not User.query.get(1):
-            print("Creating default admin user...")
-            admin_user = User(
-                username='admin',
-                auth_source='local',
-                password_reset_required=True
-            )
-            admin_user.set_password('changeme')
-            db.session.add(admin_user)
-            db.session.commit()
-            print("Default admin user created with password 'changeme'. Please login to reset.")
 
 def create_app(config_class=Config):
     """
@@ -45,6 +31,7 @@ def create_app(config_class=Config):
     # Initialize extensions with the app
     cache.init_app(app)
     db.init_app(app)
+    migrate.init_app(app, db) # Initialize Migrate with app and db
     login_manager.init_app(app)
     oauth.init_app(app)
 
@@ -96,9 +83,5 @@ def create_app(config_class=Config):
         if current_user.is_authenticated and current_user.password_reset_required:
             if request.endpoint and request.endpoint not in ['auth.reset_password', 'auth.logout', 'static']:
                 return redirect(url_for('auth.reset_password'))
-
-    with app.app_context():
-        db.create_all()
-        create_default_admin(app)
 
     return app
