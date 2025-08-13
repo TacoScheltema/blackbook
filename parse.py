@@ -10,27 +10,24 @@ def extract_files_from_data_file(data_file_path, target_dir):
     buffer = []
 
     for line in lines:
-        if line.startswith("# filename:"):
-            stripped = line.strip()
-
-            # Start of a new file block
-            if not stripped.startswith("# end file"):
-                if current_path and buffer:
-                    write_file(current_path, buffer, target_dir)
-                    buffer = []
-
-                current_path = stripped[12:].strip()
-                #print ( "current path:", current_path )
-
-            # End of current file block
-            elif stripped == "# end file":
-                if current_path and buffer:
-                    write_file(current_path, buffer, target_dir)
-                current_path = None
+        # Detect start marker
+        if line.startswith("# filename:") or line.startswith("<!-- filename:"):
+            if current_path and buffer:
+                write_file(current_path, buffer, target_dir)
                 buffer = []
-                continue  # Skip '# end file'
 
-        elif current_path and not line.startswith("# end file"):
+            current_path = parse_filename(line)
+
+        # Detect end marker
+        elif line.strip() == "# end file" or line.strip() == "<!-- end file -->":
+            if current_path and buffer:
+                write_file(current_path, buffer, target_dir)
+            current_path = None
+            buffer = []
+            continue  # Do not include end marker
+
+        # Normal content lines
+        elif current_path:
             if line.strip() == "":
                 buffer.append("\n")
             else:
@@ -39,6 +36,14 @@ def extract_files_from_data_file(data_file_path, target_dir):
     # Write last file if not closed
     if current_path and buffer:
         write_file(current_path, buffer, target_dir)
+
+def parse_filename(line):
+    """Extracts filename from start marker line."""
+    if line.startswith("# filename:"):
+        return line[len("# filename:"):].strip()
+    elif line.startswith("<!-- filename:"):
+        return line[len("<!-- filename:"):].replace("-->", "").strip()
+    return None
 
 def write_file(rel_path, content_lines, base_dir):
     full_path = os.path.join(base_dir, rel_path)
@@ -61,3 +66,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
