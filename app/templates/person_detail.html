@@ -89,6 +89,12 @@ N:${person.sn ? person.sn[0] : ''};${person.givenName ? person.givenName[0] : ''
     if (person.telephoneNumber && person.telephoneNumber[0]) {
         vCard += `TEL;TYPE=WORK,VOICE:${person.telephoneNumber[0]}\n`;
     }
+    let street = person.street ? person.street[0] : '';
+    let city = person.l ? person.l[0] : '';
+    let postalCode = person.postalCode ? person.postalCode[0] : '';
+    if (street || city || postalCode) {
+        vCard += `ADR;TYPE=WORK:;;${street};${city};;${postalCode};\n`;
+    }
     vCard += `END:VCARD`;
 
     // Clear previous QR code if it exists
