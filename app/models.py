@@ -13,6 +13,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     # 'sso' or 'local' or 'ldap' to know the origin
     auth_source = db.Column(db.String(20), default='local')
+    # Flag to force password reset on first login
+    password_reset_required = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

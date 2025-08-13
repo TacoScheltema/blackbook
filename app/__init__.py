@@ -1,8 +1,8 @@
 import base64
-from flask import Flask
+from flask import Flask, request, redirect, url_for
 from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from authlib.integrations.flask_client import OAuth
 from config import Config
 
@@ -19,6 +19,22 @@ def b64encode_filter(s):
         s = s.encode('utf-8')
     return base64.urlsafe_b64encode(s).decode('utf-8')
 
+def create_default_admin(app):
+    with app.app_context():
+        from app.models import User
+        # Check if local login is enabled and if the admin user doesn't exist
+        if app.config['ENABLE_LOCAL_LOGIN'] and not User.query.get(1):
+            print("Creating default admin user...")
+            admin_user = User(
+                username='admin',
+                auth_source='local',
+                password_reset_required=True
+            )
+            admin_user.set_password('changeme')
+            db.session.add(admin_user)
+            db.session.commit()
+            print("Default admin user created with password 'changeme'. Please login to reset.")
+
 def create_app(config_class=Config):
     """
     The application factory. Follows Flask best practices.
@@ -33,7 +49,6 @@ def create_app(config_class=Config):
     oauth.init_app(app)
 
     # --- Register OAuth Providers ---
-    # Google
     if app.config['GOOGLE_CLIENT_ID'] and app.config['GOOGLE_CLIENT_SECRET']:
         oauth.register(
             name='google',
@@ -42,8 +57,6 @@ def create_app(config_class=Config):
             server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
             client_kwargs={'scope': 'openid email profile'}
         )
-
-    # Keycloak
     if app.config['KEYCLOAK_CLIENT_ID'] and app.config['KEYCLOAK_SERVER_URL']:
         oauth.register(
             name='keycloak',
@@ -52,8 +65,6 @@ def create_app(config_class=Config):
             server_metadata_url=f"{app.config['KEYCLOAK_SERVER_URL']}/.well-known/openid-configuration",
             client_kwargs={'scope': 'openid email profile'}
         )
-
-    # Authentik
     if app.config['AUTHENTIK_CLIENT_ID'] and app.config['AUTHENTIK_SERVER_URL']:
         oauth.register(
             name='authentik',
@@ -62,7 +73,6 @@ def create_app(config_class=Config):
             server_metadata_url=f"{app.config['AUTHENTIK_SERVER_URL']}/.well-known/openid-configuration",
             client_kwargs={'scope': 'openid email profile'}
         )
-
 
     # Make the config available to all templates.
     @app.context_processor
@@ -75,12 +85,20 @@ def create_app(config_class=Config):
     # Register blueprints
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
-
     from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp)
 
+    @app.before_request
+    def before_request_hook():
+        # This function runs before every request.
+        # If the user is logged in and needs to reset their password,
+        # it redirects them to the reset page, unless they are already there.
+        if current_user.is_authenticated and current_user.password_reset_required:
+            if request.endpoint and request.endpoint not in ['auth.reset_password', 'auth.logout', 'static']:
+                return redirect(url_for('auth.reset_password'))
+
     with app.app_context():
         db.create_all()
+        create_default_admin(app)
 
     return app
-

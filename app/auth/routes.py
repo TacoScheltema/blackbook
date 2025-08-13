@@ -1,5 +1,5 @@
 from flask import render_template, flash, redirect, url_for, request, current_app
-from flask_login import login_user, logout_user, current_user
+from flask_login import login_user, logout_user, current_user, login_required
 from urllib.parse import urlparse
 from app import db, oauth
 from app.auth import bp
@@ -56,6 +56,30 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
+
+@bp.route('/reset-password', methods=['GET', 'POST'])
+@login_required
+def reset_password():
+    if not current_user.password_reset_required:
+        # Don't allow access if a reset is not required
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        password = request.form.get('password')
+        password2 = request.form.get('password2')
+
+        if not password or password != password2:
+            flash('Passwords do not match or are empty.', 'warning')
+            return redirect(url_for('auth.reset_password'))
+
+        current_user.set_password(password)
+        current_user.password_reset_required = False
+        db.session.commit()
+        flash('Your password has been reset successfully.', 'success')
+        return redirect(url_for('main.index'))
+
+    return render_template('auth/reset_password.html', title='Reset Password')
+
 
 # --- SSO Login Routes ---
 
