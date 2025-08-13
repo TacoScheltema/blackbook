@@ -55,70 +55,79 @@ The application is configured using environment variables. A template is provide
 
 ### Required Settings:
 * `SECRET_KEY`: **This is critical for security.** Generate a long, random string for this value. You can use an online generator or a command like `openssl rand -hex 32`.
-* `DATABASE_URL`: By default, this is set to use a local SQLite database (`app.db`), which will be created automatically. No changes are needed unless you want to use a different database like PostgreSQL.
-* `LDAP_SERVER`, `LDAP_BASE_DN`, etc.: Fill in all the connection details for your LDAP server. The `LDAP_BIND_DN` user needs read access to the directory and write access if you intend to use the "Add Company" or "Edit Person" features.
+* `DATABASE_URL`: By default, this is set to use a local SQLite database (`app.db`). No changes are needed unless you want to use a different database like PostgreSQL.
+* `LDAP_SERVER`, `LDAP_BASE_DN`, etc.: Fill in all the connection details for your LDAP server.
 
 ### Optional Settings:
 * **Authentication Methods:**
     * `ENABLE_LOCAL_LOGIN`: Set to `False` to hide the "Local Account" tab on the login page.
     * `ENABLE_LDAP_LOGIN`: Set to `False` to hide the "LDAP" tab on the login page.
-* **SSO Providers:** To enable an SSO provider (Google, Keycloak, Authentik), you must fill in its `CLIENT_ID` and `CLIENT_SECRET` variables. If these are left blank, the corresponding button will not appear on the login page. Refer to the specific `README.md` file for each provider for setup instructions.
-* **Attribute Maps:** Customize `LDAP_ATTRIBUTE_MAP` and `LDAP_COMPANY_ATTRIBUTE_MAP` to control which fields are displayed throughout the application.
+* **SSO Providers:** To enable an SSO provider (Google, Keycloak, Authentik), you must fill in its `CLIENT_ID` and `CLIENT_SECRET` variables.
+* **Attribute Maps:** Customize `LDAP_ATTRIBUTE_MAP` and `LDAP_COMPANY_ATTRIBUTE_MAP` to control which fields are displayed.
 
-## 4. Running the Application
+## 4. Database Initialization and Upgrades
+
+This application uses **Flask-Migrate** to manage database schema changes.
+
+### Step 4.1: First-Time Setup
+After you've configured your `.env` file, you need to initialize the database. **Run these commands only once** for the initial setup.
+
+```bash
+# Ensure your virtual environment is activated
+# Initialize the migration repository (creates a 'migrations' folder)
+flask db init
+
+# Create the first migration script based on the current models
+flask db migrate -m "Initial migration."
+
+# Apply the migration to create the database and its tables
+flask db upgrade
+```
+
+### Step 4.2: Creating the Default Admin User
+After initializing the database, you need to create the default admin user. A helper command is available for this.
+
+```bash
+# Ensure your virtual environment is activated
+flask create-admin
+```
+This will create the user `admin` with the password `changeme`.
+
+### Step 4.3: Handling Future Schema Updates
+If you pull new code that includes changes to the database models (e.g., a new column is added), you **do not** delete the database. Instead, you run the following commands to safely upgrade it:
+
+```bash
+# Ensure your virtual environment is activated
+# Generate a new migration script that detects the changes
+flask db migrate -m "A short description of the changes."
+
+# Apply the changes to your database
+flask db upgrade
+```
+
+## 5. Running the Application
 
 ### Development Mode
 For development and testing, you can use Flask's built-in web server.
 
-1.  Ensure your virtual environment is activated.
-2.  Run the following command:
-    ```bash
-    flask run
-    ```
-3.  Open your web browser and navigate to `http://127.0.0.1:5000`.
-
-**Note:** This mode is **not suitable for production**. It is slow and insecure.
+```bash
+flask run
+```
+Open your web browser and navigate to `http://127.0.0.1:5000`.
 
 ### Production Mode
-For a production deployment, you must use a proper WSGI server like Gunicorn.
+For a production deployment, use a proper WSGI server like Gunicorn.
 
-1.  Ensure your virtual environment is activated.
-2.  Run the application using Gunicorn, binding it to a network interface.
-    ```bash
-    # This will serve the application on port 8000 on all network interfaces
-    gunicorn --bind 0.0.0.0:8000 wsgi:application
-    ```
-3.  You would typically run this behind a reverse proxy like Nginx or Caddy for SSL termination and improved performance.
+```bash
+gunicorn --bind 0.0.0.0:8000 wsgi:application
+```
 
-## 5. First Login (Local Admin)
+## 6. First Login (Local Admin)
 
-If you have `ENABLE_LOCAL_LOGIN` set to `True`, the application will automatically create a default administrator account the first time it starts.
+If you have `ENABLE_LOCAL_LOGIN` set to `True`, you can now log in with the default administrator account.
 
 * **Username:** `admin`
 * **Password:** `changeme`
 
-When you log in with these credentials for the first time, you will be **forced to reset your password** before you can access any other part of the application. Once you've reset the password, you can use the admin page to manage other local users.
-
-## 6. Handling Database Schema Updates
-
-This application uses a simple SQLite database (`app.db`) for local user management. The database file is created automatically if it doesn't exist.
-
-If a future update to the application includes changes to the database schema (e.g., adding a new column to the `User` table), you will need to recreate the database.
-
-1.  **Stop the application.**
-2.  **Back up the old database:** Rename or move the existing `app.db` file in the root of your project directory. For example:
-    ```bash
-    mv app.db app.db.bak
-    ```
-3.  **Restart the application:**
-    ```bash
-    # For development:
-    flask run
-    # For production:
-    gunicorn --bind 0.0.0.0:8000 wsgi:application
-    ```
-
-When the application starts, it will not find an `app.db` file and will automatically create a new one with the updated schema.
-
-**Important:** This process will delete all existing local user accounts. The default `admin` user will be re-created, and you will need to log in with the password `changeme` and reset it again.
+You will be **forced to reset your password** immediately after your first login.
 
