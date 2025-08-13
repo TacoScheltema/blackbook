@@ -262,6 +262,7 @@ N:{get_val('sn')};{get_val('givenName')};;;
 ORG:{get_val('o')}
 EMAIL;TYPE=WORK,INTERNET:{get_val('mail')}
 TEL;TYPE=WORK,VOICE:{get_val('telephoneNumber')}
+ADR;TYPE=WORK:;;{get_val('street')};{get_val('l')};;{get_val('postalCode')};
 END:VCARD"""
 
     filename = f"{get_val('cn').replace(' ', '_')}.vcf"
