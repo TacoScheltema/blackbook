@@ -219,7 +219,19 @@ def company_detail(b64_dn):
         employee_filter = f'(& (objectClass={person_class}) ({company_link_attr}={company_name}) )'
         employees = search_ldap(employee_filter, person_attrs, size_limit=200)
 
-    return render_template('company_detail.html', title=company_name, company=company, employees=employees)
+    # Capture all relevant query params to pass them back for the "back" button
+    back_params = {
+        'page': request.args.get('page'),
+        'sort_by': request.args.get('sort_by'),
+        'sort_order': request.args.get('sort_order')
+    }
+    back_params = {k: v for k, v in back_params.items() if v is not None}
+
+    return render_template('company_detail.html', 
+                           title=company_name, 
+                           company=company, 
+                           employees=employees,
+                           back_params=back_params)
 
 @bp.route('/person/<b64_dn>')
 @login_required
@@ -236,7 +248,22 @@ def person_detail(b64_dn):
         abort(404)
 
     person_name = person.get('cn', ['Unknown'])[0]
-    return render_template('person_detail.html', title=person_name, person=person, b64_dn=b64_dn)
+
+    # Capture all relevant query params to pass them back for the "back" button
+    back_params = {
+        'page': request.args.get('page'),
+        'page_size': request.args.get('page_size'),
+        'q': request.args.get('q'),
+        'sort_by': request.args.get('sort_by'),
+        'sort_order': request.args.get('sort_order')
+    }
+    back_params = {k: v for k, v in back_params.items() if v is not None}
+
+    return render_template('person_detail.html', 
+                           title=person_name, 
+                           person=person, 
+                           b64_dn=b64_dn,
+                           back_params=back_params)
 
 @bp.route('/person/vcard/<b64_dn>')
 @login_required

@@ -60,7 +60,7 @@
         <tbody>
             {% if companies %}
                 {% for company in companies %}
-                <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.company_detail', b64_dn=company.dn|b64encode) }}';">
+                <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.company_detail', b64_dn=company.dn|b64encode, page=page, sort_by=sort_by, sort_order=sort_order) }}';">
                     {% for attr_name in config.LDAP_COMPANY_ATTRIBUTE_MAP.keys() %}
                         <td>{{ (company[attr_name][0] if company.get(attr_name) else '') }}</td>
                     {% endfor %}
