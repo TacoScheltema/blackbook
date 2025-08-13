@@ -1,15 +1,28 @@
 import base64
 import ldap3
 import math
+from functools import wraps
 from flask import render_template, current_app, abort, request, flash, redirect, url_for
+from flask_login import login_required, current_user
 from app.main import bp
 from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
-# Import the cache object we created in app/__init__.py
-from app import cache
+from app.models import User
+from app import db, cache
+
+COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode', 'countryCode']
 
 def get_config(key):
     """Helper to safely get config values."""
     return current_app.config.get(key, '')
+
+def admin_required(f):
+    """Decorator to restrict access to admin users."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.id != 1:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
 @cache.memoize()
 def get_all_people_cached():
@@ -23,6 +36,7 @@ def get_all_people_cached():
     return search_ldap(search_filter, person_attrs)
 
 @bp.route('/')
+@login_required
 def index():
     """Main index page. Now only shows a paginated list of all persons."""
     search_query = request.args.get('q', '')
@@ -97,6 +111,7 @@ def index():
                            sort_order=sort_order)
 
 @bp.route('/companies')
+@login_required
 def all_companies():
     """New page to display a paginated list of all companies."""
     sort_by = request.args.get('sort_by', 'o') # Default sort by Company name
@@ -145,6 +160,7 @@ def all_companies():
 
 
 @bp.route('/company/add', methods=['GET', 'POST'])
+@login_required
 def add_company():
     """Handles creation of a new company entry."""
     if request.method == 'POST':
@@ -179,6 +195,7 @@ def add_company():
 
 
 @bp.route('/company/<b64_dn>')
+@login_required
 def company_detail(b64_dn):
     """Displays details for a single company and its employees."""
     try:
@@ -205,6 +222,7 @@ def company_detail(b64_dn):
     return render_template('company_detail.html', title=company_name, company=company, employees=employees)
 
 @bp.route('/person/<b64_dn>')
+@login_required
 def person_detail(b64_dn):
     """Displays details for a single person."""
     try:
@@ -221,6 +239,7 @@ def person_detail(b64_dn):
     return render_template('person_detail.html', title=person_name, person=person, b64_dn=b64_dn)
 
 @bp.route('/person/edit/<b64_dn>', methods=['GET', 'POST'])
+@login_required
 def edit_person(b64_dn):
     """Handles editing of a person entry."""
     try:
@@ -262,3 +281,53 @@ def edit_person(b64_dn):
     person_name = current_person.get('cn', ['Unknown'])[0]
     return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, companies=companies, b64_dn=b64_dn)
 
+# --- Admin Routes ---
+
+@bp.route('/admin/users')
+@login_required
+@admin_required
+def admin_users():
+    if not current_app.config['ENABLE_LOCAL_LOGIN']:
+        return redirect(url_for('main.index'))
+    users = User.query.filter(User.auth_source == 'local').all()
+    return render_template('admin/users.html', title='Manage Users', users=users)
+
+@bp.route('/admin/add_user', methods=['POST'])
+@login_required
+@admin_required
+def add_user():
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    if User.query.filter_by(username=username).first():
+        flash('Username already exists.', 'danger')
+    else:
+        user = User(username=username, email=email, auth_source='local')
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        flash('User added successfully.', 'success')
+    return redirect(url_for('main.admin_users'))
+
+@bp.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_user(user_id):
+    if user_id == 1: # Prevent deleting admin
+        flash('Cannot delete the primary admin user.', 'danger')
+        return redirect(url_for('main.admin_users'))
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    flash('User deleted successfully.', 'success')
+    return redirect(url_for('main.admin_users'))
+
+@bp.route('/admin/force_reset/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def force_reset_password(user_id):
+    user = User.query.get_or_404(user_id)
+    user.password_reset_required = True
+    db.session.commit()
+    flash(f'Password reset has been forced for {user.username}.', 'info')
+    return redirect(url_for('main.admin_users'))

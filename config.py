@@ -15,6 +15,15 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'a-very-secret-key-that-you-should-change'
     FLASK_DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
 
+    # --- Authentication Method Toggles ---
+    ENABLE_LOCAL_LOGIN = os.environ.get('ENABLE_LOCAL_LOGIN', 'True').lower() in ('true', '1', 't')
+    ENABLE_LDAP_LOGIN = os.environ.get('ENABLE_LDAP_LOGIN', 'True').lower() in ('true', '1', 't')
+
+    # --- Database Configuration ---
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+        'sqlite:///' + os.path.join(basedir, 'app.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
     # --- Caching Configuration ---
     CACHE_TYPE = 'SimpleCache'
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get('LDAP_CACHE_TIMEOUT', 300))
@@ -25,6 +34,18 @@ class Config:
     LDAP_BIND_DN = os.environ.get('LDAP_BIND_DN')
     LDAP_BIND_PASSWORD = os.environ.get('LDAP_BIND_PASSWORD')
     LDAP_USE_SSL = os.environ.get('LDAP_USE_SSL', 'False').lower() in ('true', '1', 't')
+
+    # --- SSO/OAuth Configuration ---
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+
+    KEYCLOAK_CLIENT_ID = os.environ.get('KEYCLOAK_CLIENT_ID')
+    KEYCLOAK_CLIENT_SECRET = os.environ.get('KEYCLOAK_CLIENT_SECRET')
+    KEYCLOAK_SERVER_URL = os.environ.get('KEYCLOAK_SERVER_URL')
+
+    AUTHENTIK_CLIENT_ID = os.environ.get('AUTHENTIK_CLIENT_ID')
+    AUTHENTIK_CLIENT_SECRET = os.environ.get('AUTHENTIK_CLIENT_SECRET')
+    AUTHENTIK_SERVER_URL = os.environ.get('AUTHENTIK_SERVER_URL')
 
     # --- ObjectClass Configuration ---
     LDAP_PERSON_OBJECT_CLASS = os.environ.get('LDAP_PERSON_OBJECT_CLASS', 'inetOrgPerson')
@@ -94,4 +115,3 @@ class Config:
         PAGE_SIZE_OPTIONS = [20, 30, 50]
 
     DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0] if PAGE_SIZE_OPTIONS else 20
-
