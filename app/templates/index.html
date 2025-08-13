@@ -40,19 +40,19 @@
             <ul class="pagination justify-content-center">
                 <!-- Previous Button -->
                 <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('main.index', page=page-1, page_size=page_size, q=search_query) }}">Previous</a>
+                    <a class="page-link" href="{{ url_for('main.index', page=page-1, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}">Previous</a>
                 </li>
 
                 <!-- Page Number Buttons -->
                 {% for p in page_numbers %}
                     <li class="page-item {% if p == page %}active{% endif %}">
-                        <a class="page-link" href="{{ url_for('main.index', page=p, page_size=page_size, q=search_query) }}">{{ p }}</a>
+                        <a class="page-link" href="{{ url_for('main.index', page=p, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}">{{ p }}</a>
                     </li>
                 {% endfor %}
 
                 <!-- Next Button -->
                 <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('main.index', page=page+1, page_size=page_size, q=search_query) }}">Next</a>
+                    <a class="page-link" href="{{ url_for('main.index', page=page+1, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}">Next</a>
                 </li>
             </ul>
         </nav>

@@ -25,15 +25,15 @@
 <nav aria-label="Company page navigation" class="mb-3">
     <ul class="pagination justify-content-center">
         <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('main.all_companies', page=page-1) }}">Previous</a>
+            <a class="page-link" href="{{ url_for('main.all_companies', page=page-1, sort_by=sort_by, sort_order=sort_order) }}">Previous</a>
         </li>
         {% for p in page_numbers %}
             <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('main.all_companies', page=p) }}">{{ p }}</a>
+                <a class="page-link" href="{{ url_for('main.all_companies', page=p, sort_by=sort_by, sort_order=sort_order) }}">{{ p }}</a>
             </li>
         {% endfor %}
         <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('main.all_companies', page=page+1) }}">Next</a>
+            <a class="page-link" href="{{ url_for('main.all_companies', page=page+1, sort_by=sort_by, sort_order=sort_order) }}">Next</a>
         </li>
     </ul>
 </nav>
