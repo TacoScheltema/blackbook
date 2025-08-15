@@ -9,6 +9,8 @@ from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_
 from app.models import User
 from app import db, cache
 
+COMPANY_ATTRS = ['o', 'description', 'street', 'l', 'st', 'postalCode', 'countryCode']
+
 def get_config(key):
     """Helper to safely get config values."""
     return current_app.config.get(key, '')
@@ -26,15 +28,12 @@ def admin_required(f):
 def get_all_people_cached():
     """
     A cached function to get all people from LDAP.
-    This will use the ADDRESSBOOK_FILTER from the .env file if it is set.
     """
     print("CACHE MISS: Fetching all people from LDAP server...")
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
     person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
     search_filter = f"(objectClass={person_class})"
-    # Use the specific contacts DN from the config for the search base
-    contacts_dn = get_config('LDAP_CONTACTS_DN')
-    return search_ldap(search_filter, person_attrs, search_base=contacts_dn)
+    return search_ldap(search_filter, person_attrs)
 
 @bp.route('/')
 @login_required
@@ -107,15 +106,23 @@ def index():
 @bp.route('/companies')
 @login_required
 def all_companies():
-    """Displays a list of unique company names derived from the contacts."""
-    all_people = get_all_people_cached()
-    company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
+    """New page to display a paginated list of all companies."""
+    sort_by = request.args.get('sort_by', 'o') # Default sort by Company name
+    sort_order = request.args.get('sort_order', 'asc')
 
-    # Create a unique, sorted list of company names
-    company_names = sorted(list(set(
-        p[company_link_attr][0] for p in all_people if p.get(company_link_attr) and p[company_link_attr]
-    )))
-    total_companies = len(company_names)
+    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
+    company_attrs = get_config('LDAP_COMPANY_ATTRIBUTES')
+    company_filter = f'(objectClass={company_class})'
+    all_companies = search_ldap(company_filter, company_attrs)
+
+    # Sort the entire list before pagination
+    if sort_by in company_attrs:
+        all_companies.sort(
+            key=lambda c: (c.get(sort_by)[0] if c.get(sort_by) else '').lower(),
+            reverse=(sort_order == 'desc')
+        )
+
+    total_companies = len(all_companies)
 
     try:
         page = int(request.args.get('page', 1))
@@ -125,7 +132,7 @@ def all_companies():
     PAGE_SIZE = 20
     start_index = (page - 1) * PAGE_SIZE
     end_index = start_index + PAGE_SIZE
-    companies_on_page = company_names[start_index:end_index]
+    companies_on_page = all_companies[start_index:end_index]
     total_pages = math.ceil(total_companies / PAGE_SIZE)
 
     PAGES_TO_SHOW = 6
@@ -140,30 +147,84 @@ def all_companies():
                            companies=companies_on_page,
                            page=page,
                            total_pages=total_pages,
-                           page_numbers=page_numbers)
+                           page_numbers=page_numbers,
+                           sort_by=sort_by,
+                           sort_order=sort_order)
 
 
-@bp.route('/company/<b64_company_name>')
+@bp.route('/company/add', methods=['GET', 'POST'])
 @login_required
-def company_detail(b64_company_name):
-    """Displays a list of people belonging to a specific company."""
+def add_company():
+    """Handles creation of a new company entry."""
+    if request.method == 'POST':
+        company_name = request.form.get('company_name')
+        if not company_name:
+            flash('Company Name is a required field.', 'warning')
+            return redirect(url_for('main.add_company'))
+
+        base_dn = get_config('LDAP_BASE_DN')
+        new_dn = f"o={company_name},{base_dn}"
+        object_classes = ['top', 'organization']
+
+        attributes = {
+            'o': company_name,
+            'description': request.form.get('description'),
+            'street': request.form.get('street'),
+            'l': request.form.get('city'),
+            'st': request.form.get('state'),
+            'postalCode': request.form.get('postal_code')
+        }
+        attributes = {k: v for k, v in attributes.items() if v}
+
+        if add_ldap_entry(new_dn, object_classes, attributes):
+            flash(f'Company "{company_name}" added successfully!', 'success')
+            cache.clear() # Clear the cache after adding a company
+            b64_dn = base64.urlsafe_b64encode(new_dn.encode('utf-8')).decode('utf-8')
+            return redirect(url_for('main.company_detail', b64_dn=b64_dn))
+        else:
+            return redirect(url_for('main.add_company'))
+
+    return render_template('add_company.html', title='Add New Company')
+
+
+@bp.route('/company/<b64_dn>')
+@login_required
+def company_detail(b64_dn):
+    """Displays details for a single company and its employees."""
     try:
-        company_name = base64.urlsafe_b64decode(b64_company_name).decode('utf-8')
+        dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
-    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
-    person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
-    company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
+    company_attrs = get_config('LDAP_COMPANY_ATTRIBUTES')
+    company = get_entry_by_dn(dn, company_attrs)
+    if not company:
+        abort(404)
 
-    # Search for all people where their company attribute matches the company name
-    employee_filter = f'(& (objectClass={person_class}) ({company_link_attr}={company_name}) )'
-    employees = search_ldap(employee_filter, person_attrs)
+    company_name = company.get('o', [None])[0]
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
+
+    if not company_name:
+        employees = []
+    else:
+        person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
+        company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
+        employee_filter = f'(& (objectClass={person_class}) ({company_link_attr}={company_name}) )'
+        employees = search_ldap(employee_filter, person_attrs, size_limit=200)
+
+    # Capture all relevant query params to pass them back for the "back" button
+    back_params = {
+        'page': request.args.get('page'),
+        'sort_by': request.args.get('sort_by'),
+        'sort_order': request.args.get('sort_order')
+    }
+    back_params = {k: v for k, v in back_params.items() if v is not None}
 
     return render_template('company_detail.html', 
-                           title=f"Company: {company_name}", 
-                           company_name=company_name,
-                           employees=employees)
+                           title=company_name, 
+                           company=company, 
+                           employees=employees,
+                           back_params=back_params)
 
 @bp.route('/person/<b64_dn>')
 @login_required

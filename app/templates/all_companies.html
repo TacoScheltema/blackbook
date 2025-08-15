@@ -24,15 +24,15 @@
 <nav aria-label="Company page navigation" class="mb-3">
     <ul class="pagination justify-content-center">
         <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('main.all_companies', page=page-1, sort_by=sort_by, sort_order=sort_order) }}">Previous</a>
+            <a class="page-link" href="{{ url_for('main.all_companies', page=page-1) }}">Previous</a>
         </li>
         {% for p in page_numbers %}
             <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('main.all_companies', page=p, sort_by=sort_by, sort_order=sort_order) }}">{{ p }}</a>
+                <a class="page-link" href="{{ url_for('main.all_companies', page=p) }}">{{ p }}</a>
             </li>
         {% endfor %}
         <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('main.all_companies', page=page+1, sort_by=sort_by, sort_order=sort_order) }}">Next</a>
+            <a class="page-link" href="{{ url_for('main.all_companies', page=page+1) }}">Next</a>
         </li>
     </ul>
 </nav>
@@ -42,30 +42,19 @@
     <table class="table table-striped table-hover table-sm mb-0 align-middle">
         <thead class="table-dark">
             <tr class="sortable-header">
-                {% for attr_name, display_name in config.LDAP_COMPANY_ATTRIBUTE_MAP.items() %}
-                    <th>
-                        {% if attr_name == 'o' %}
-                            <a href="{{ url_for('main.all_companies', sort_by=attr_name, sort_order='desc' if sort_by == attr_name and sort_order == 'asc' else 'asc', page=page) }}">
-                                {{ display_name }}
-                                {% if sort_by == attr_name %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
-                            </a>
-                        {% else %}
-                            {{ display_name }}
-                        {% endif %}
-                    </th>
-                {% endfor %}
+                <th>Company</th>
             </tr>
         </thead>
         <tbody>
             {% if companies %}
                 {% for company_name in companies %}
-                <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.company_detail', b64_company_name=company_name|b64encode, page=page, sort_by=sort_by, sort_order=sort_order) }}';">
+                <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.company_detail', b64_company_name=company_name|b64encode) }}';">
                     <td>{{ company_name }}</td>
                 </tr>
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="{{ config.LDAP_COMPANY_ATTRIBUTE_MAP|length }}" class="text-center p-4">No companies found.</td>
+                    <td class="text-center p-4">No companies found.</td>
                 </tr>
             {% endif %}
         </tbody>
