@@ -46,27 +46,36 @@ def authenticate_ldap_user(username, password):
         return True
     return False
 
-def search_ldap(filter_str, attributes, size_limit=0):
+def search_ldap(filter_str, attributes, size_limit=0, search_base=None):
     """
     Performs a search on the LDAP directory using the admin credentials.
+
+    :param filter_str: The LDAP search filter string.
+    :param attributes: A list of attributes to retrieve for each entry.
+    :param size_limit: The maximum number of entries to return (0 for no limit).
+    :param search_base: The base DN to search from. Defaults to LDAP_BASE_DN if not provided.
+    :return: A list of entry dictionaries or an empty list on error.
     """
     conn = get_ldap_connection(read_only=True)
     if not conn:
         return []
 
-    base_dn = current_app.config['LDAP_BASE_DN']
+    if search_base is None:
+        search_base = current_app.config['LDAP_BASE_DN']
 
     try:
         conn.search(
-            search_base=base_dn,
+            search_base=search_base,
             search_filter=filter_str,
             attributes=attributes,
             size_limit=size_limit
         )
         results = []
         for entry in conn.entries:
+            # Convert ldap3 entry object to a more usable dictionary
             result_dict = {'dn': entry.entry_dn}
             for attr in attributes:
+                # Store all values for an attribute in a list.
                 result_dict[attr] = entry[attr].values if entry[attr] else []
             results.append(result_dict)
         return results
@@ -162,4 +171,3 @@ def modify_ldap_entry(dn, changes):
     finally:
         if conn:
             conn.unbind()
-

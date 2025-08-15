@@ -35,6 +35,10 @@ class Config:
     LDAP_BIND_PASSWORD = os.environ.get('LDAP_BIND_PASSWORD')
     LDAP_USE_SSL = os.environ.get('LDAP_USE_SSL', 'False').lower() in ('true', '1', 't')
 
+    # --- Contact Filter ---
+    # Use a specific DN for contact searches if provided, otherwise fall back to the base DN.
+    LDAP_CONTACTS_DN = os.environ.get('ADDRESSBOOK_FILTER') or LDAP_BASE_DN
+
     # --- SSO/OAuth Configuration ---
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
