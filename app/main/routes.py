@@ -47,11 +47,23 @@ def index():
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
 
-    try:
-        page_size = int(request.args.get('page_size', default_page_size))
-        if page_size not in page_size_options:
-            page_size = default_page_size
-    except ValueError:
+    # Get page size from request args first.
+    page_size_from_request = request.args.get('page_size', type=int)
+
+    if page_size_from_request and page_size_from_request in page_size_options:
+        page_size = page_size_from_request
+        # If the user's choice is different from what's stored, update it.
+        if current_user.page_size != page_size:
+            current_user.page_size = page_size
+            db.session.commit()
+    else:
+        # If no valid page size in request, use the one stored for the user.
+        # This can be None for old users.
+        page_size = current_user.page_size
+
+    # If, after all that, page_size is still None (e.g., for a pre-existing user),
+    # fall back to the application default to prevent errors.
+    if page_size is None:
         page_size = default_page_size
 
     try:
