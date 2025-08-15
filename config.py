@@ -27,6 +27,8 @@ class Config:
     # --- Caching Configuration ---
     CACHE_TYPE = 'SimpleCache'
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get('LDAP_CACHE_TIMEOUT', 300))
+    CACHE_REFRESH_INTERVAL = int(os.environ.get('CACHE_REFRESH_INTERVAL', 300))
+
 
     # --- LDAP Configuration ---
     LDAP_SERVER = os.environ.get('LDAP_SERVER')
@@ -115,3 +117,5 @@ class Config:
     except (ValueError, IndexError):
         print("WARNING: PAGE_SIZE_OPTIONS is malformed. Using default.")
         PAGE_SIZE_OPTIONS = [20, 30, 50]
+
+    DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0] if PAGE_SIZE_OPTIONS else 20
