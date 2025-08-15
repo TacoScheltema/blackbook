@@ -45,14 +45,19 @@ def index():
     sort_order = request.args.get('sort_order', 'asc')
 
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
-    default_page_size = get_config('DEFAULT_PAGE_SIZE')
 
-    try:
-        page_size = int(request.args.get('page_size', default_page_size))
-        if page_size not in page_size_options:
-            page_size = default_page_size
-    except ValueError:
-        page_size = default_page_size
+    # Get page size from request args first.
+    page_size_from_request = request.args.get('page_size', type=int)
+
+    if page_size_from_request and page_size_from_request in page_size_options:
+        page_size = page_size_from_request
+        # If the user's choice is different from what's stored, update it.
+        if current_user.page_size != page_size:
+            current_user.page_size = page_size
+            db.session.commit()
+    else:
+        # If no valid page size in request, use the one stored for the user.
+        page_size = current_user.page_size
 
     try:
         page = int(request.args.get('page', 1))

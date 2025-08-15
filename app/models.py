@@ -15,6 +15,8 @@ class User(UserMixin, db.Model):
     auth_source = db.Column(db.String(20), default='local')
     # Flag to force password reset on first login
     password_reset_required = db.Column(db.Boolean, default=False)
+    # New column to store user's page size preference
+    page_size = db.Column(db.Integer, default=20)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
