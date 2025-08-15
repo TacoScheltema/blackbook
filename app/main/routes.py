@@ -43,6 +43,7 @@ def index():
     search_query = request.args.get('q', '')
     sort_by = request.args.get('sort_by', 'sn') # Default sort by Surname
     sort_order = request.args.get('sort_order', 'asc')
+    letter = request.args.get('letter', '')
 
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
@@ -80,6 +81,12 @@ def index():
             if p.get('cn') and query in p['cn'][0].lower()
         ]
 
+    if letter:
+        all_people = [
+            p for p in all_people
+            if p.get('sn') and p['sn'][0].upper().startswith(letter)
+        ]
+
     # Sort the entire list before pagination
     if sort_by in get_config('LDAP_PERSON_ATTRIBUTES'):
         all_people.sort(
@@ -103,6 +110,7 @@ def index():
         start_page = max(1, end_page - PAGES_TO_SHOW + 1)
 
     page_numbers = range(start_page, end_page + 1)
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     return render_template('index.html', 
                            title='Address Book', 
@@ -114,7 +122,9 @@ def index():
                            total_people=total_people,
                            page_numbers=page_numbers,
                            sort_by=sort_by,
-                           sort_order=sort_order)
+                           sort_order=sort_order,
+                           alphabet=alphabet,
+                           letter=letter)
 
 @bp.route('/companies')
 @login_required
