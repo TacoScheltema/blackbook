@@ -57,9 +57,14 @@ def index():
             current_user.page_size = page_size
             db.session.commit()
     else:
-        # If no valid page size in request, use the one stored for the user,
-        # or fall back to the application default if the user has no preference set.
-        page_size = current_user.page_size or default_page_size
+        # If no valid page size in request, use the one stored for the user.
+        # This can be None for old users.
+        page_size = current_user.page_size
+
+    # If, after all that, page_size is still None (e.g., for a pre-existing user),
+    # fall back to the application default to prevent errors.
+    if page_size is None:
+        page_size = default_page_size
 
     try:
         page = int(request.args.get('page', 1))
