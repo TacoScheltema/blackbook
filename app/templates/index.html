@@ -40,19 +40,19 @@
             <ul class="pagination justify-content-center">
                 <!-- Previous Button -->
                 <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('main.index', page=page-1, page_size=page_size, q=search_query) }}">Previous</a>
+                    <a class="page-link" href="{{ url_for('main.index', page=page-1, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}">Previous</a>
                 </li>
 
                 <!-- Page Number Buttons -->
                 {% for p in page_numbers %}
                     <li class="page-item {% if p == page %}active{% endif %}">
-                        <a class="page-link" href="{{ url_for('main.index', page=p, page_size=page_size, q=search_query) }}">{{ p }}</a>
+                        <a class="page-link" href="{{ url_for('main.index', page=p, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}">{{ p }}</a>
                     </li>
                 {% endfor %}
 
                 <!-- Next Button -->
                 <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('main.index', page=page+1, page_size=page_size, q=search_query) }}">Next</a>
+                    <a class="page-link" href="{{ url_for('main.index', page=page+1, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}">Next</a>
                 </li>
             </ul>
         </nav>
@@ -73,7 +73,7 @@
                 <tbody>
                     {% if people %}
                         {% for person in people %}
-                        <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}';">
+                        <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.person_detail', b64_dn=person.dn|b64encode, page=page, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}';">
                             <td>{{ person.givenName[0] if person.givenName else '' }}</td>
                             <td><strong>{{ person.sn[0] if person.sn else '' }}</strong></td>
                             <td>
@@ -88,7 +88,7 @@
                             </td>
                             <td>
                                 {% if person.o and person.o[0] and company_dn_map.get(person.o[0]) %}
-                                    <a href="{{ url_for('main.company_detail', b64_dn=company_dn_map[person.o[0]]|b64encode) }}" class="person-meta-link" onclick="event.stopPropagation();">{{ person.o[0] }}</a>
+                                    <a href="{{ url_for('main.company_detail', b64_dn=company_dn_map[person.o[0]]|b64encode, page=page, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}" class="person-meta-link" onclick="event.stopPropagation();">{{ person.o[0] }}</a>
                                 {% else %}
                                     {{ (person.o[0] if person.o else '') }}
                                 {% endif %}
