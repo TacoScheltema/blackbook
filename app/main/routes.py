@@ -28,12 +28,15 @@ def admin_required(f):
 def get_all_people_cached():
     """
     A cached function to get all people from LDAP.
+    This will use the ADDRESSBOOK_FILTER from the .env file if it is set.
     """
     print("CACHE MISS: Fetching all people from LDAP server...")
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
     person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
     search_filter = f"(objectClass={person_class})"
-    return search_ldap(search_filter, person_attrs)
+    # Use the specific contacts DN from the config for the search base
+    contacts_dn = get_config('LDAP_CONTACTS_DN')
+    return search_ldap(search_filter, person_attrs, search_base=contacts_dn)
 
 @bp.route('/')
 @login_required
