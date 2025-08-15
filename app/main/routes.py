@@ -130,6 +130,7 @@ def index():
 @login_required
 def all_companies():
     """Displays a list of unique company names derived from the contacts."""
+    letter = request.args.get('letter', '')
     all_people = get_all_people_cached()
     company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
 
@@ -137,6 +138,10 @@ def all_companies():
     company_names = sorted(list(set(
         p[company_link_attr][0] for p in all_people if p.get(company_link_attr) and p[company_link_attr]
     )))
+
+    if letter:
+        company_names = [name for name in company_names if name.upper().startswith(letter)]
+
     total_companies = len(company_names)
 
     try:
@@ -156,13 +161,16 @@ def all_companies():
     if end_page - start_page + 1 < PAGES_TO_SHOW:
         start_page = max(1, end_page - PAGES_TO_SHOW + 1)
     page_numbers = range(start_page, end_page + 1)
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     return render_template('all_companies.html',
                            title='All Companies',
                            companies=companies_on_page,
                            page=page,
                            total_pages=total_pages,
-                           page_numbers=page_numbers)
+                           page_numbers=page_numbers,
+                           alphabet=alphabet,
+                           letter=letter)
 
 
 @bp.route('/company/<b64_company_name>')

@@ -17,22 +17,39 @@
         </svg>
         Companies
     </h2>
+    {% if letter %}
+        <a href="{{ url_for('main.all_companies') }}" class="btn btn-secondary">Clear Filter</a>
+    {% else %}
+        <a href="#" class="btn btn-primary disabled">+ Add Company</a>
+    {% endif %}
 </div>
+
+<!-- Alphabetical Pager -->
+<nav aria-label="Alphabetical navigation" class="mb-3">
+    <ul class="pagination pagination-sm justify-content-center flex-wrap">
+        <li class="page-item {% if not letter %}active{% endif %}"><a class="page-link" href="{{ url_for('main.all_companies') }}">All</a></li>
+        {% for char in alphabet %}
+            <li class="page-item {% if letter == char %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('main.all_companies', letter=char) }}">{{ char }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+</nav>
 
 <!-- Pagination Controls for Companies -->
 {% if total_pages > 1 %}
 <nav aria-label="Company page navigation" class="mb-3">
     <ul class="pagination justify-content-center">
         <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('main.all_companies', page=page-1) }}">Previous</a>
+            <a class="page-link" href="{{ url_for('main.all_companies', page=page-1, letter=letter) }}">Previous</a>
         </li>
         {% for p in page_numbers %}
             <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('main.all_companies', page=p) }}">{{ p }}</a>
+                <a class="page-link" href="{{ url_for('main.all_companies', page=p, letter=letter) }}">{{ p }}</a>
             </li>
         {% endfor %}
         <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('main.all_companies', page=page+1) }}">Next</a>
+            <a class="page-link" href="{{ url_for('main.all_companies', page=page+1, letter=letter) }}">Next</a>
         </li>
     </ul>
 </nav>
@@ -41,7 +58,7 @@
 <div class="table-responsive shadow-sm rounded">
     <table class="table table-striped table-hover table-sm mb-0 align-middle">
         <thead class="table-dark">
-            <tr class="sortable-header">
+            <tr>
                 <th>Company</th>
             </tr>
         </thead>
