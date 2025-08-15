@@ -36,7 +36,6 @@ class Config:
     LDAP_USE_SSL = os.environ.get('LDAP_USE_SSL', 'False').lower() in ('true', '1', 't')
 
     # --- Contact Filter ---
-    # Use a specific DN for contact searches if provided, otherwise fall back to the base DN.
     LDAP_CONTACTS_DN = os.environ.get('ADDRESSBOOK_FILTER') or LDAP_BASE_DN
 
     # --- SSO/OAuth Configuration ---
@@ -53,7 +52,6 @@ class Config:
 
     # --- ObjectClass Configuration ---
     LDAP_PERSON_OBJECT_CLASS = os.environ.get('LDAP_PERSON_OBJECT_CLASS', 'inetOrgPerson')
-    LDAP_COMPANY_OBJECT_CLASS = os.environ.get('LDAP_COMPANY_OBJECT_CLASS', 'organization')
     LDAP_COMPANY_LINK_ATTRIBUTE = os.environ.get('LDAP_COMPANY_LINK_ATTRIBUTE', 'o')
 
     # --- Attribute Configuration ---
@@ -84,31 +82,6 @@ class Config:
         ])
 
     LDAP_PERSON_ATTRIBUTES = list(LDAP_ATTRIBUTE_MAP.keys())
-
-    # --- Company Attribute Configuration ---
-    LDAP_COMPANY_ATTRIBUTE_MAP_STR = os.environ.get('LDAP_COMPANY_ATTRIBUTE_MAP')
-    if LDAP_COMPANY_ATTRIBUTE_MAP_STR:
-        try:
-            LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict(
-                (pair.split(':')[0].strip(), pair.split(':')[1].strip())
-                for pair in LDAP_COMPANY_ATTRIBUTE_MAP_STR.split(',')
-            )
-        except IndexError:
-            print("WARNING: LDAP_COMPANY_ATTRIBUTE_MAP is malformed. Using default.")
-            LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict()
-    else:
-        LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict()
-
-    if not LDAP_COMPANY_ATTRIBUTE_MAP:
-        LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict([
-            ('o', 'Company'),
-            ('street', 'Street'),
-            ('postalCode', 'Postcode'),
-            ('l', 'City')
-        ])
-
-    LDAP_COMPANY_ATTRIBUTES = list(LDAP_COMPANY_ATTRIBUTE_MAP.keys())
-
 
     # --- Pagination Configuration ---
     PAGE_SIZE_OPTIONS_STR = os.environ.get('PAGE_SIZE_OPTIONS', '20,30,50')
