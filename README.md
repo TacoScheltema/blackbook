@@ -38,7 +38,7 @@ Here are a few examples of the application's interface.
 
 **Company List View:**
 
-<img src="media/screenshots/company.png" width="400" height="400">
+<img src="media/screenshots/companies.png" width="400" height="400">
 
 **Contact Detail View with QR Code:**
 
