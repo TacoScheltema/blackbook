@@ -17,6 +17,7 @@ def create_admin():
         print("Creating default admin user...")
         admin_user = User(
             username='admin',
+            email='admin@example.com', # Added a default email
             auth_source='local',
             password_reset_required=True
         )
