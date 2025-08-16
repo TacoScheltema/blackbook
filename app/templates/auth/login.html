@@ -59,7 +59,9 @@
                     {% endif %}
                 </div>
                 <div class="text-center mt-3">
+                    {% if config.ENABLE_LOCAL_LOGIN or config.ENABLE_LDAP_LOGIN %}
                     <a href="{{ url_for('auth.request_password_reset') }}">Forgot Password?</a>
+                    {% endif %}
                 </div>
                 {% endif %}
 
