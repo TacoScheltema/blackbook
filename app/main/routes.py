@@ -305,10 +305,9 @@ def edit_person(b64_dn):
 @login_required
 @admin_required
 def admin_users():
-    if not current_app.config['ENABLE_LOCAL_LOGIN']:
-        return redirect(url_for('main.index'))
-    users = User.query.filter(User.auth_source == 'local').all()
-    return render_template('admin/users.html', title='Manage Users', users=users)
+    local_users = User.query.filter(User.auth_source == 'local').all()
+    ldap_users = User.query.filter(User.auth_source == 'ldap').all()
+    return render_template('admin/users.html', title='Manage Users', local_users=local_users, ldap_users=ldap_users)
 
 @bp.route('/admin/cache')
 @login_required
