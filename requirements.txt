@@ -13,3 +13,4 @@ Werkzeug
 Requests
 Flask-Migrate
 APScheduler
+Flask-Mail

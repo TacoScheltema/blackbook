@@ -29,6 +29,17 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get('LDAP_CACHE_TIMEOUT', 300))
     CACHE_REFRESH_INTERVAL = int(os.environ.get('CACHE_REFRESH_INTERVAL', 300))
 
+    # --- Email Server Configuration ---
+    MAIL_SERVER = os.environ.get('MAIL_SERVER')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_FROM_ADDRESS = os.environ.get('MAIL_FROM_ADDRESS')
+
+    # --- Password Reset ---
+    PASSWORD_RESET_EXPIRATION_HOURS = int(os.environ.get('PASSWORD_RESET_EXPIRATION_HOURS', 24))
+
 
     # --- LDAP Configuration ---
     LDAP_SERVER = os.environ.get('LDAP_SERVER')
@@ -36,6 +47,9 @@ class Config:
     LDAP_BIND_DN = os.environ.get('LDAP_BIND_DN')
     LDAP_BIND_PASSWORD = os.environ.get('LDAP_BIND_PASSWORD')
     LDAP_USE_SSL = os.environ.get('LDAP_USE_SSL', 'False').lower() in ('true', '1', 't')
+    # Template for user DNs, e.g., "uid={username},ou=users,dc=example,dc=com"
+    LDAP_USER_DN_TEMPLATE = os.environ.get('LDAP_USER_DN_TEMPLATE')
+
 
     # --- Contact Filter ---
     LDAP_CONTACTS_DN = os.environ.get('ADDRESSBOOK_FILTER') or LDAP_BASE_DN

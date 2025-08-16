@@ -58,11 +58,22 @@
                     </div>
                     {% endif %}
                 </div>
+                <div class="text-center mt-3">
+                    {% if config.ENABLE_LOCAL_LOGIN or config.ENABLE_LDAP_LOGIN %}
+                    <a href="{{ url_for('auth.request_password_reset') }}">Forgot Password?</a>
+                    {% endif %}
+                </div>
                 {% endif %}
 
                 <!-- SSO Providers -->
                 <div class="mt-4 text-center">
-                    <p class="text-muted">Or sign in with</p>
+                    <p class="text-muted">
+                        {% if config.ENABLE_LOCAL_LOGIN or config.ENABLE_LDAP_LOGIN %}
+                            Or sign in with
+                        {% else %}
+                            Sign in with
+                        {% endif %}
+                    </p>
                     {% if config.GOOGLE_CLIENT_ID %}
                     <a href="{{ url_for('auth.sso_login', provider='google') }}" class="btn btn-outline-danger mb-2 w-100">
                         Sign In with Google

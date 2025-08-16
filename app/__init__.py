@@ -5,6 +5,7 @@ from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
+from flask_mail import Mail
 from authlib.integrations.flask_client import OAuth
 from apscheduler.schedulers.background import BackgroundScheduler
 from config import Config
@@ -17,6 +18,7 @@ login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 oauth = OAuth()
 scheduler = BackgroundScheduler()
+mail = Mail()
 
 def b64encode_filter(s):
     """Jinja2 filter to base64 encode a string."""
@@ -37,6 +39,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     oauth.init_app(app)
+    mail.init_app(app)
 
     # --- Register OAuth Providers ---
     if app.config['GOOGLE_CLIENT_ID'] and app.config['GOOGLE_CLIENT_SECRET']:
@@ -64,7 +67,6 @@ def create_app(config_class=Config):
             client_kwargs={'scope': 'openid email profile'}
         )
 
-
     # Make the config available to all templates.
     @app.context_processor
     def inject_config():
@@ -86,7 +88,6 @@ def create_app(config_class=Config):
                 return redirect(url_for('auth.reset_password'))
 
     # --- Start Background Scheduler ---
-    # CORRECTED: Import from the renamed 'jobs.py' file
     from app.jobs import refresh_ldap_cache
 
     # Run the job once on startup to ensure cache is populated immediately

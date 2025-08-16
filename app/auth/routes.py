@@ -4,19 +4,36 @@ from urllib.parse import urlparse
 from app import db, oauth
 from app.auth import bp
 from app.models import User
-from app.ldap_utils import authenticate_ldap_user
+from app.ldap_utils import authenticate_ldap_user, set_ldap_password
+from app.email import send_password_reset_email
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
+    # --- Logic for auto-redirecting if only one SSO is enabled ---
+    sso_providers = []
+    if current_app.config['GOOGLE_CLIENT_ID']:
+        sso_providers.append('google')
+    if current_app.config['KEYCLOAK_CLIENT_ID']:
+        sso_providers.append('keycloak')
+    if current_app.config['AUTHENTIK_CLIENT_ID']:
+        sso_providers.append('authentik')
+
+    local_enabled = current_app.config['ENABLE_LOCAL_LOGIN']
+    ldap_enabled = current_app.config['ENABLE_LDAP_LOGIN']
+
+    # If only one SSO is enabled and local/ldap are disabled, redirect immediately
+    if not local_enabled and not ldap_enabled and len(sso_providers) == 1:
+        return redirect(url_for('auth.sso_login', provider=sso_providers[0]))
+    # --- End of new logic ---
+
     if request.method == 'POST':
         auth_type = request.form.get('auth_type')
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Check if the selected login method is disabled
         if auth_type == 'local' and not current_app.config['ENABLE_LOCAL_LOGIN']:
             flash('Local login is disabled.', 'warning')
             return redirect(url_for('auth.login'))
@@ -61,7 +78,6 @@ def logout():
 @login_required
 def reset_password():
     if not current_user.password_reset_required:
-        # Don't allow access if a reset is not required
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
@@ -72,13 +88,68 @@ def reset_password():
             flash('Passwords do not match or are empty.', 'warning')
             return redirect(url_for('auth.reset_password'))
 
-        current_user.set_password(password)
+        if current_user.auth_source == 'local':
+            current_user.set_password(password)
+        elif current_user.auth_source == 'ldap':
+            if not set_ldap_password(current_user.username, password):
+                flash('Failed to update LDAP password.', 'danger')
+                return redirect(url_for('auth.reset_password'))
+
         current_user.password_reset_required = False
         db.session.commit()
         flash('Your password has been reset successfully.', 'success')
         return redirect(url_for('main.index'))
 
     return render_template('auth/reset_password.html', title='Reset Password')
+
+@bp.route('/request-password-reset', methods=['GET', 'POST'])
+def request_password_reset():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+        if user:
+            send_password_reset_email(user)
+            db.session.commit()
+            flash('Check your email for the instructions to reset your password', 'info')
+        else:
+            flash('No user found with that email address.', 'warning')
+        return redirect(url_for('auth.login'))
+    return render_template('auth/request_reset_password.html', title='Request Password Reset')
+
+@bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password_token(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    user = User.verify_reset_password_token(token)
+    if not user:
+        flash('The password reset link is invalid or has expired.', 'warning')
+        return redirect(url_for('auth.login'))
+
+    if request.method == 'POST':
+        password = request.form.get('password')
+        password2 = request.form.get('password2')
+
+        if not password or password != password2:
+            flash('Passwords do not match or are empty.', 'warning')
+            return redirect(url_for('auth.reset_password_token', token=token))
+
+        if user.auth_source == 'local':
+            user.set_password(password)
+        elif user.auth_source == 'ldap':
+            if not set_ldap_password(user.username, password):
+                flash('Failed to update LDAP password.', 'danger')
+                return redirect(url_for('auth.reset_password_token', token=token))
+
+        user.password_reset_token = None
+        user.password_reset_expiration = None
+        user.password_reset_required = False
+        db.session.commit()
+        flash('Your password has been reset successfully.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/reset_password_token.html', title='Reset Your Password', token=token)
 
 
 # --- SSO Login Routes ---

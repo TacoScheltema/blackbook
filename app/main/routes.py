@@ -2,11 +2,13 @@ import base64
 import ldap3
 import math
 from functools import wraps
+from datetime import datetime
 from flask import Response, render_template, current_app, abort, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.main import bp
-from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
+from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry, delete_ldap_user, add_ldap_user, set_ldap_password
 from app.models import User
+from app.email import send_password_reset_email
 from app import db, cache, scheduler
 
 def get_config(key):
@@ -305,10 +307,13 @@ def edit_person(b64_dn):
 @login_required
 @admin_required
 def admin_users():
-    if not current_app.config['ENABLE_LOCAL_LOGIN']:
-        return redirect(url_for('main.index'))
-    users = User.query.filter(User.auth_source == 'local').all()
-    return render_template('admin/users.html', title='Manage Users', users=users)
+    local_users = User.query.filter(User.auth_source == 'local').all()
+    ldap_users = User.query.filter(User.auth_source == 'ldap').all()
+    return render_template('admin/users.html', 
+                           title='Manage Users', 
+                           local_users=local_users, 
+                           ldap_users=ldap_users,
+                           current_time=datetime.utcnow())
 
 @bp.route('/admin/cache')
 @login_required
@@ -322,37 +327,70 @@ def admin_cache():
 @login_required
 @admin_required
 def add_user():
+    auth_type = request.form.get('auth_type')
     username = request.form.get('username')
     email = request.form.get('email')
     password = request.form.get('password')
 
-    if not all([username, email, password]):
-        flash('All fields are required.', 'warning')
+    if not all([username, password]):
+        flash('Username and password are required.', 'warning')
         return redirect(url_for('main.admin_users'))
 
     if User.query.filter_by(username=username).first():
-        flash('Username already exists.', 'danger')
-    elif User.query.filter_by(email=email).first():
-        flash('Email address already in use.', 'danger')
-    else:
+        flash('Username already exists in the local database.', 'danger')
+        return redirect(url_for('main.admin_users'))
+
+    if auth_type == 'local':
+        if not email:
+            flash('Email is required for local users.', 'warning')
+            return redirect(url_for('main.admin_users'))
+        if User.query.filter_by(email=email).first():
+            flash('Email address already in use.', 'danger')
+            return redirect(url_for('main.admin_users'))
+
         user = User(username=username, email=email, auth_source='local')
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        flash('User added successfully.', 'success')
+        flash('Local user added successfully.', 'success')
+
+    elif auth_type == 'ldap':
+        given_name = request.form.get('given_name')
+        surname = request.form.get('surname')
+        if not all([given_name, surname, email]):
+            flash('Given Name, Surname, and Email are required for LDAP users.', 'warning')
+            return redirect(url_for('main.admin_users'))
+
+        if User.query.filter_by(email=email).first():
+            flash('Email address already in use by another user.', 'danger')
+            return redirect(url_for('main.admin_users'))
+
+        if add_ldap_user(username, password, email, given_name, surname):
+            user = User(username=username, email=email, auth_source='ldap')
+            db.session.add(user)
+            db.session.commit()
+            flash('LDAP user added successfully.', 'success')
+
     return redirect(url_for('main.admin_users'))
 
 @bp.route('/admin/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_user(user_id):
-    if user_id == 1: # Prevent deleting admin
+    if user_id == 1:
         flash('Cannot delete the primary admin user.', 'danger')
         return redirect(url_for('main.admin_users'))
+
     user = User.query.get_or_404(user_id)
+
+    if user.auth_source == 'ldap':
+        if not delete_ldap_user(user.username):
+            flash('Failed to delete user from LDAP. Aborting.', 'danger')
+            return redirect(url_for('main.admin_users'))
+
     db.session.delete(user)
     db.session.commit()
-    flash('User deleted successfully.', 'success')
+    flash(f'User {user.username} deleted successfully.', 'success')
     return redirect(url_for('main.admin_users'))
 
 @bp.route('/admin/force_reset/<int:user_id>', methods=['POST'])
@@ -360,7 +398,12 @@ def delete_user(user_id):
 @admin_required
 def force_reset_password(user_id):
     user = User.query.get_or_404(user_id)
-    user.password_reset_required = True
-    db.session.commit()
-    flash(f'Password reset has been forced for {user.username}.', 'info')
+
+    if not user.email:
+        flash(f'Cannot send reset link: User {user.username} has no email address.', 'danger')
+        return redirect(url_for('main.admin_users'))
+
+    send_password_reset_email(user)
+    db.session.commit() # The token is saved in the send_password_reset_email function
+    flash(f'A password reset link has been sent to {user.email}.', 'info')
     return redirect(url_for('main.admin_users'))
