@@ -24,14 +24,18 @@
                             <td>{{ user.username }} {% if user.password_reset_required %}<span class="badge bg-warning text-dark">Reset Required</span>{% endif %}</td>
                             <td>{{ user.email or 'N/A' }}</td>
                             <td>
-                                {% if user.id != 1 %} {# Can't delete the main admin user #}
-                                <form action="{{ url_for('main.delete_user', user_id=user.id) }}" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this user?');">Delete</button>
-                                </form>
+                                {% if user.password_reset_token %}
+                                    <span class="badge bg-info text-dark countdown" data-expires="{{ user.password_reset_expiration.isoformat() }}Z">Link sent</span>
+                                {% else %}
+                                    {% if user.id != 1 %} {# Can't delete the main admin user #}
+                                    <form action="{{ url_for('main.delete_user', user_id=user.id) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this user?');">Delete</button>
+                                    </form>
+                                    {% endif %}
+                                    <form action="{{ url_for('main.force_reset_password', user_id=user.id) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-warning btn-sm">Force Reset</button>
+                                    </form>
                                 {% endif %}
-                                <form action="{{ url_for('main.force_reset_password', user_id=user.id) }}" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-warning btn-sm">Force Reset</button>
-                                </form>
                             </td>
                         </tr>
                         {% endfor %}
@@ -62,12 +66,16 @@
                             <td>{{ user.username }} {% if user.password_reset_required %}<span class="badge bg-warning text-dark">Reset Required</span>{% endif %}</td>
                             <td>{{ user.email or 'N/A' }}</td>
                             <td>
+                                {% if user.password_reset_token %}
+                                    <span class="badge bg-info text-dark countdown" data-expires="{{ user.password_reset_expiration.isoformat() }}Z">Link sent</span>
+                                {% else %}
                                 <form action="{{ url_for('main.delete_user', user_id=user.id) }}" method="post" class="d-inline">
                                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('This will delete the user from both the local database and LDAP. Are you sure?');">Delete</button>
                                 </form>
                                 <form action="{{ url_for('main.force_reset_password', user_id=user.id) }}" method="post" class="d-inline">
                                     <button type="submit" class="btn btn-warning btn-sm">Force Reset</button>
                                 </form>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -151,4 +159,36 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const countdownElements = document.querySelectorAll('.countdown');
+    const serverNow = new Date('{{ current_time.isoformat() }}Z');
+
+    countdownElements.forEach(el => {
+        const expires = new Date(el.dataset.expires);
+
+        const updateCountdown = () => {
+            const now = new Date(serverNow.getTime() + (new Date().getTime() - new Date('{{ current_time.isoformat() }}Z').getTime()));
+            const remaining = expires - now;
+
+            if (remaining < 0) {
+                el.textContent = 'Expired';
+                el.classList.remove('bg-info');
+                el.classList.add('bg-secondary');
+                return;
+            }
+
+            const hours = Math.floor(remaining / (1000 * 60 * 60));
+            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+            el.textContent = `Expires in ${hours}h ${minutes}m ${seconds}s`;
+        };
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    });
+});
+</script>
 {% endblock %}

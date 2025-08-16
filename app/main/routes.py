@@ -2,10 +2,11 @@ import base64
 import ldap3
 import math
 from functools import wraps
+from datetime import datetime
 from flask import Response, render_template, current_app, abort, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.main import bp
-from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry, delete_ldap_user, add_ldap_user
+from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry, delete_ldap_user, add_ldap_user, set_ldap_password
 from app.models import User
 from app.email import send_password_reset_email
 from app import db, cache, scheduler
@@ -308,7 +309,11 @@ def edit_person(b64_dn):
 def admin_users():
     local_users = User.query.filter(User.auth_source == 'local').all()
     ldap_users = User.query.filter(User.auth_source == 'ldap').all()
-    return render_template('admin/users.html', title='Manage Users', local_users=local_users, ldap_users=ldap_users)
+    return render_template('admin/users.html', 
+                           title='Manage Users', 
+                           local_users=local_users, 
+                           ldap_users=ldap_users,
+                           current_time=datetime.utcnow())
 
 @bp.route('/admin/cache')
 @login_required
