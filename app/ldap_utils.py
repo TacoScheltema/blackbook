@@ -1,6 +1,20 @@
 import ldap3
+import hashlib
+import os
+import base64
 from ldap3.core.exceptions import LDAPException
 from flask import current_app, flash
+
+def hash_password_ssha(password):
+    """Hashes a password using the SSHA (Salted SHA-1) scheme."""
+    salt = os.urandom(4)
+    # Concatenate password and salt, then hash
+    h = hashlib.sha1(password.encode('utf-8'))
+    h.update(salt)
+    # Concatenate hash and salt for storage
+    hashed_password = h.digest() + salt
+    # Base64 encode and format for LDAP
+    return b'{SSHA}' + base64.b64encode(hashed_password)
 
 def get_ldap_connection(user_dn=None, password=None, read_only=False):
     """
@@ -47,7 +61,7 @@ def authenticate_ldap_user(username, password):
     return False
 
 def add_ldap_user(username, password, email, given_name, surname):
-    """Adds a new user to the LDAP directory."""
+    """Adds a new user to the LDAP directory with a hashed password."""
     user_dn_template = current_app.config.get('LDAP_USER_DN_TEMPLATE')
     if not user_dn_template:
         flash('LDAP user DN template is not configured.', 'danger')
@@ -55,16 +69,17 @@ def add_ldap_user(username, password, email, given_name, surname):
 
     user_dn = user_dn_template.format(username=username)
 
-    # These object classes are common for OpenLDAP/inetOrgPerson.
-    # Active Directory would require a different set (e.g., ['top', 'person', 'organizationalPerson', 'user'])
     object_classes = ['inetOrgPerson', 'organizationalPerson', 'person', 'top']
+
+    # Hash the password before storing it
+    hashed_password = hash_password_ssha(password)
 
     attributes = {
         'cn': f"{given_name} {surname}",
         'sn': surname,
         'givenName': given_name,
         'mail': email,
-        'userPassword': password
+        'userPassword': hashed_password
     }
 
     conn = get_ldap_connection()
