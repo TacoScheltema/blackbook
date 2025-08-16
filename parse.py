@@ -39,6 +39,8 @@ def extract_files_from_data_file(data_file_path, target_dir):
 
 def parse_filename(line):
     """Extracts filename from start marker line."""
+    if line.startswith("# filename: ."):
+        return line[len("# filename: .").strip()
     if line.startswith("# filename:"):
         return line[len("# filename:"):].strip()
     elif line.startswith("<!-- filename:"):
