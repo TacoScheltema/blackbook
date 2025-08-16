@@ -5,8 +5,9 @@ from functools import wraps
 from flask import Response, render_template, current_app, abort, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.main import bp
-from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry, delete_ldap_user, add_ldap_user, set_ldap_password
+from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry, delete_ldap_user, add_ldap_user
 from app.models import User
+from app.email import send_password_reset_email
 from app import db, cache, scheduler
 
 def get_config(key):
@@ -393,12 +394,11 @@ def delete_user(user_id):
 def force_reset_password(user_id):
     user = User.query.get_or_404(user_id)
 
-    if user.auth_source == 'ldap':
-        if not set_ldap_password(user.username, 'changeme'):
-            flash('Failed to reset LDAP password.', 'danger')
-            return redirect(url_for('main.admin_users'))
+    if not user.email:
+        flash(f'Cannot send reset link: User {user.username} has no email address.', 'danger')
+        return redirect(url_for('main.admin_users'))
 
-    user.password_reset_required = True
-    db.session.commit()
-    flash(f'Password reset has been forced for {user.username}. They will need to log in with the password "changeme".', 'info')
+    send_password_reset_email(user)
+    db.session.commit() # The token is saved in the send_password_reset_email function
+    flash(f'A password reset link has been sent to {user.email}.', 'info')
     return redirect(url_for('main.admin_users'))
