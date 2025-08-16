@@ -1,0 +1,31 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0 # Use the latest stable version
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: debug-statements
+      - id: requirements-txt-fixer
+
+  - repo: https://github.com/psf/black
+    rev: 24.4.2 # Use the latest stable version
+    hooks:
+      - id: black
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.0 # Use the latest stable version
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2 # Use the latest stable version
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.2.5 # Use the latest stable version
+    hooks:
+      - id: pylint
+        args: ["--rcfile=.pylintrc"] # Optional: if you have a custom Pylint config
