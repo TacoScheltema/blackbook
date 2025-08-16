@@ -17,6 +17,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
+        # Check if the selected login method is disabled
         if auth_type == 'local' and not current_app.config['ENABLE_LOCAL_LOGIN']:
             flash('Local login is disabled.', 'warning')
             return redirect(url_for('auth.login'))
@@ -61,6 +62,7 @@ def logout():
 @login_required
 def reset_password():
     if not current_user.password_reset_required:
+        # Don't allow access if a reset is not required
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
@@ -94,6 +96,7 @@ def request_password_reset():
         user = User.query.filter_by(email=email).first()
         if user:
             send_password_reset_email(user)
+            db.session.commit()
             flash('Check your email for the instructions to reset your password', 'info')
         else:
             flash('No user found with that email address.', 'warning')
@@ -126,6 +129,7 @@ def reset_password_token(token):
 
         user.password_reset_token = None
         user.password_reset_expiration = None
+        user.password_reset_required = False # This is the crucial fix
         db.session.commit()
         flash('Your password has been reset successfully.', 'success')
         return redirect(url_for('auth.login'))
