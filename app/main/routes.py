@@ -297,12 +297,7 @@ def edit_person(b64_dn):
 
         return redirect(url_for('main.person_detail', b64_dn=b64_dn))
 
-    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
-    company_filter = f'(objectClass={company_class})'
-    companies = search_ldap(company_filter, ['o'], size_limit=200)
-
-    person_name = current_person.get('cn', ['Unknown'])[0]
-    return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, companies=companies, b64_dn=b64_dn)
+    return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, b64_dn=b64_dn)
 
 # --- Admin Routes ---
 
@@ -330,8 +325,15 @@ def add_user():
     username = request.form.get('username')
     email = request.form.get('email')
     password = request.form.get('password')
+
+    if not all([username, email, password]):
+        flash('All fields are required.', 'warning')
+        return redirect(url_for('main.admin_users'))
+
     if User.query.filter_by(username=username).first():
         flash('Username already exists.', 'danger')
+    elif User.query.filter_by(email=email).first():
+        flash('Email address already in use.', 'danger')
     else:
         user = User(username=username, email=email, auth_source='local')
         user.set_password(password)
