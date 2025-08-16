@@ -12,12 +12,28 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
+    # --- Logic for auto-redirecting if only one SSO is enabled ---
+    sso_providers = []
+    if current_app.config['GOOGLE_CLIENT_ID']:
+        sso_providers.append('google')
+    if current_app.config['KEYCLOAK_CLIENT_ID']:
+        sso_providers.append('keycloak')
+    if current_app.config['AUTHENTIK_CLIENT_ID']:
+        sso_providers.append('authentik')
+
+    local_enabled = current_app.config['ENABLE_LOCAL_LOGIN']
+    ldap_enabled = current_app.config['ENABLE_LDAP_LOGIN']
+
+    # If only one SSO is enabled and local/ldap are disabled, redirect immediately
+    if not local_enabled and not ldap_enabled and len(sso_providers) == 1:
+        return redirect(url_for('auth.sso_login', provider=sso_providers[0]))
+    # --- End of new logic ---
+
     if request.method == 'POST':
         auth_type = request.form.get('auth_type')
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Check if the selected login method is disabled
         if auth_type == 'local' and not current_app.config['ENABLE_LOCAL_LOGIN']:
             flash('Local login is disabled.', 'warning')
             return redirect(url_for('auth.login'))
@@ -62,7 +78,6 @@ def logout():
 @login_required
 def reset_password():
     if not current_user.password_reset_required:
-        # Don't allow access if a reset is not required
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
@@ -129,7 +144,7 @@ def reset_password_token(token):
 
         user.password_reset_token = None
         user.password_reset_expiration = None
-        user.password_reset_required = False # This is the crucial fix
+        user.password_reset_required = False
         db.session.commit()
         flash('Your password has been reset successfully.', 'success')
         return redirect(url_for('auth.login'))
