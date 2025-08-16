@@ -36,6 +36,9 @@ class Config:
     LDAP_BIND_DN = os.environ.get('LDAP_BIND_DN')
     LDAP_BIND_PASSWORD = os.environ.get('LDAP_BIND_PASSWORD')
     LDAP_USE_SSL = os.environ.get('LDAP_USE_SSL', 'False').lower() in ('true', '1', 't')
+    # Template for user DNs, e.g., "uid={username},ou=users,dc=example,dc=com"
+    LDAP_USER_DN_TEMPLATE = os.environ.get('LDAP_USER_DN_TEMPLATE')
+
 
     # --- Contact Filter ---
     LDAP_CONTACTS_DN = os.environ.get('ADDRESSBOOK_FILTER') or LDAP_BASE_DN

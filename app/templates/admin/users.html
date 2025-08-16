@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Manage Local Users</h2>
-</div>
-
 <div class="row">
     <div class="col-md-8">
-        <div class="card shadow-sm">
+        <!-- Local Users Table -->
+        {% if config.ENABLE_LOCAL_LOGIN %}
+        <div class="card shadow-sm mb-4">
             <div class="card-header">
-                Existing Users
+                Manage Local Users
             </div>
             <div class="table-responsive">
                 <table class="table table-striped table-sm mb-0">
@@ -21,7 +19,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for user in users %}
+                        {% for user in local_users %}
                         <tr>
                             <td>{{ user.username }} {% if user.password_reset_required %}<span class="badge bg-warning text-dark">Reset Required</span>{% endif %}</td>
                             <td>{{ user.email or 'N/A' }}</td>
@@ -41,28 +39,111 @@
                 </table>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
+        {% endif %}
+
+        <!-- LDAP Users Table -->
+        {% if config.ENABLE_LDAP_LOGIN %}
         <div class="card shadow-sm">
             <div class="card-header">
-                Add New Local User
+                Manage LDAP Users
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in ldap_users %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email or 'N/A' }}</td>
+                            <td>
+                                <form action="{{ url_for('main.delete_user', user_id=user.id) }}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('This will delete the user from both the local database and LDAP. Are you sure?');">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <!-- Add User Form -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                Add New User
             </div>
             <div class="card-body">
-                <form action="{{ url_for('main.add_user') }}" method="post">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" name="username" required>
+                <ul class="nav nav-tabs" id="addUserTab" role="tablist">
+                    {% if config.ENABLE_LOCAL_LOGIN %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="add-local-tab" data-bs-toggle="tab" data-bs-target="#add-local" type="button" role="tab">Local</button>
+                    </li>
+                    {% endif %}
+                    {% if config.ENABLE_LDAP_LOGIN %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if not config.ENABLE_LOCAL_LOGIN %}active{% endif %}" id="add-ldap-tab" data-bs-toggle="tab" data-bs-target="#add-ldap" type="button" role="tab">LDAP</button>
+                    </li>
+                    {% endif %}
+                </ul>
+                <div class="tab-content p-3 border border-top-0 rounded-bottom">
+                    {% if config.ENABLE_LOCAL_LOGIN %}
+                    <div class="tab-pane fade show active" id="add-local" role="tabpanel">
+                        <form action="{{ url_for('main.add_user') }}" method="post">
+                            <input type="hidden" name="auth_type" value="local">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" name="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" name="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Add Local User</button>
+                        </form>
                     </div>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" name="email" required>
+                    {% endif %}
+                    {% if config.ENABLE_LDAP_LOGIN %}
+                    <div class="tab-pane fade {% if not config.ENABLE_LOCAL_LOGIN %}show active{% endif %}" id="add-ldap" role="tabpanel">
+                        <form action="{{ url_for('main.add_user') }}" method="post">
+                            <input type="hidden" name="auth_type" value="ldap">
+                             <div class="mb-3">
+                                <label class="form-label">Username (uid)</label>
+                                <input type="text" class="form-control" name="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Given Name</label>
+                                <input type="text" class="form-control" name="given_name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Surname</label>
+                                <input type="text" class="form-control" name="surname" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-control" name="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Add LDAP User</button>
+                        </form>
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" name="password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Add User</button>
-                </form>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

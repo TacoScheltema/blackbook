@@ -64,7 +64,6 @@ def create_app(config_class=Config):
             client_kwargs={'scope': 'openid email profile'}
         )
 
-
     # Make the config available to all templates.
     @app.context_processor
     def inject_config():
@@ -86,7 +85,6 @@ def create_app(config_class=Config):
                 return redirect(url_for('auth.reset_password'))
 
     # --- Start Background Scheduler ---
-    # CORRECTED: Import from the renamed 'jobs.py' file
     from app.jobs import refresh_ldap_cache
 
     # Run the job once on startup to ensure cache is populated immediately

@@ -10,7 +10,6 @@ def get_ldap_connection(user_dn=None, password=None, read_only=False):
     server_uri = current_app.config.get('LDAP_SERVER')
     use_ssl = current_app.config.get('LDAP_USE_SSL', False)
 
-    # If no user is provided, use the admin bind credentials from the config
     if user_dn is None:
         user_dn = current_app.config.get('LDAP_BIND_DN')
         password = current_app.config.get('LDAP_BIND_PASSWORD')
@@ -34,11 +33,12 @@ def authenticate_ldap_user(username, password):
     Attempts to bind to the LDAP server with a given username and password.
     Returns True if successful, False otherwise.
     """
-    # We need to construct the user's full DN to bind.
-    # This is a common pattern, but might need adjustment for your specific LDAP schema.
-    # e.g., "uid=<username>,ou=people,dc=example,dc=com"
-    base_dn = current_app.config.get('LDAP_BASE_DN')
-    user_dn = f"cn={username},{base_dn}" # This assumes users are under the base DN with a CN. Adjust if needed.
+    user_dn_template = current_app.config.get('LDAP_USER_DN_TEMPLATE')
+    if not user_dn_template:
+        flash('LDAP user DN template is not configured.', 'danger')
+        return False
+
+    user_dn = user_dn_template.format(username=username)
 
     conn = get_ldap_connection(user_dn=user_dn, password=password)
     if conn:
@@ -46,15 +46,73 @@ def authenticate_ldap_user(username, password):
         return True
     return False
 
+def add_ldap_user(username, password, email, given_name, surname):
+    """Adds a new user to the LDAP directory."""
+    user_dn_template = current_app.config.get('LDAP_USER_DN_TEMPLATE')
+    if not user_dn_template:
+        flash('LDAP user DN template is not configured.', 'danger')
+        return False
+
+    user_dn = user_dn_template.format(username=username)
+
+    # These object classes are common for OpenLDAP/inetOrgPerson.
+    # Active Directory would require a different set (e.g., ['top', 'person', 'organizationalPerson', 'user'])
+    object_classes = ['inetOrgPerson', 'organizationalPerson', 'person', 'top']
+
+    attributes = {
+        'cn': f"{given_name} {surname}",
+        'sn': surname,
+        'givenName': given_name,
+        'mail': email,
+        'userPassword': password
+    }
+
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+
+    try:
+        success = conn.add(user_dn, object_classes, attributes)
+        if not success:
+            flash(f"LDAP Error: {conn.result['description']}", 'danger')
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred: {e}", 'danger')
+        return False
+    finally:
+        if conn:
+            conn.unbind()
+
+def delete_ldap_user(username):
+    """Deletes a user from the LDAP directory."""
+    user_dn_template = current_app.config.get('LDAP_USER_DN_TEMPLATE')
+    if not user_dn_template:
+        flash('LDAP user DN template is not configured.', 'danger')
+        return False
+
+    user_dn = user_dn_template.format(username=username)
+
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+
+    try:
+        success = conn.delete(user_dn)
+        if not success:
+            flash(f"LDAP Error: {conn.result['description']}", 'danger')
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred: {e}", 'danger')
+        return False
+    finally:
+        if conn:
+            conn.unbind()
+
 def search_ldap(filter_str, attributes, size_limit=0, search_base=None):
     """
     Performs a search on the LDAP directory using the admin credentials.
-
-    :param filter_str: The LDAP search filter string.
-    :param attributes: A list of attributes to retrieve for each entry.
-    :param size_limit: The maximum number of entries to return (0 for no limit).
-    :param search_base: The base DN to search from. Defaults to LDAP_BASE_DN if not provided.
-    :return: A list of entry dictionaries or an empty list on error.
     """
     conn = get_ldap_connection(read_only=True)
     if not conn:
@@ -72,10 +130,8 @@ def search_ldap(filter_str, attributes, size_limit=0, search_base=None):
         )
         results = []
         for entry in conn.entries:
-            # Convert ldap3 entry object to a more usable dictionary
             result_dict = {'dn': entry.entry_dn}
             for attr in attributes:
-                # Store all values for an attribute in a list.
                 result_dict[attr] = entry[attr].values if entry[attr] else []
             results.append(result_dict)
         return results

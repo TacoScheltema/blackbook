@@ -5,7 +5,7 @@ from functools import wraps
 from flask import Response, render_template, current_app, abort, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.main import bp
-from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
+from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry, delete_ldap_user
 from app.models import User
 from app import db, cache, scheduler
 
@@ -32,7 +32,6 @@ def get_all_people_cached():
     person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
     person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
     search_filter = f"(objectClass={person_class})"
-    # Use the specific contacts DN from the config for the search base
     contacts_dn = get_config('LDAP_CONTACTS_DN')
     return search_ldap(search_filter, person_attrs, search_base=contacts_dn)
 
@@ -41,28 +40,23 @@ def get_all_people_cached():
 def index():
     """Main index page. Now only shows a paginated list of all persons."""
     search_query = request.args.get('q', '')
-    sort_by = request.args.get('sort_by', 'sn') # Default sort by Surname
+    sort_by = request.args.get('sort_by', 'sn')
     sort_order = request.args.get('sort_order', 'asc')
     letter = request.args.get('letter', '')
 
     page_size_options = get_config('PAGE_SIZE_OPTIONS')
     default_page_size = get_config('DEFAULT_PAGE_SIZE')
 
-    # Get page size from request args first.
     page_size_from_request = request.args.get('page_size', type=int)
 
     if page_size_from_request and page_size_from_request in page_size_options:
         page_size = page_size_from_request
-        # If the user's choice is different from what's stored, update it.
         if current_user.page_size != page_size:
             current_user.page_size = page_size
             db.session.commit()
     else:
-        # If no valid page size in request, use the one stored for the user.
         page_size = current_user.page_size
 
-    # If, after all that, page_size is still None (e.g., for a pre-existing user),
-    # fall back to the application default to prevent errors.
     if page_size is None:
         page_size = default_page_size
 
@@ -86,7 +80,6 @@ def index():
             if p.get('sn') and p['sn'][0].upper().startswith(letter)
         ]
 
-    # Sort the entire list before pagination
     if sort_by in get_config('LDAP_PERSON_ATTRIBUTES'):
         all_people.sort(
             key=lambda p: (p.get(sort_by)[0] if p.get(sort_by) else '').lower(),
@@ -133,7 +126,6 @@ def all_companies():
     all_people = cache.get('all_people') or []
     company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
 
-    # Create a unique, sorted list of company names
     company_names = sorted(list(set(
         p[company_link_attr][0] for p in all_people if p.get(company_link_attr) and p[company_link_attr]
     )))
@@ -210,7 +202,6 @@ def person_detail(b64_dn):
 
     person_name = person.get('cn', ['Unknown'])[0]
 
-    # Capture all relevant query params to pass them back for the "back" button
     back_params = {
         'page': request.args.get('page'),
         'page_size': request.args.get('page_size'),
@@ -240,7 +231,6 @@ def person_vcard(b64_dn):
     if not person:
         abort(404)
 
-    # Helper to safely get the first value of an attribute
     get_val = lambda attr: (person.get(attr) or [''])[0]
 
     vcard = f"""BEGIN:VCARD
@@ -293,7 +283,7 @@ def edit_person(b64_dn):
             flash('No changes were submitted.', 'info')
         elif modify_ldap_entry(dn, changes):
             flash('Person details updated successfully!', 'success')
-            cache.clear() # Clear the cache after a successful modification
+            cache.clear()
 
         return redirect(url_for('main.person_detail', b64_dn=b64_dn))
 
@@ -322,37 +312,66 @@ def admin_cache():
 @login_required
 @admin_required
 def add_user():
+    auth_type = request.form.get('auth_type')
     username = request.form.get('username')
     email = request.form.get('email')
     password = request.form.get('password')
 
-    if not all([username, email, password]):
-        flash('All fields are required.', 'warning')
+    if not all([username, password]):
+        flash('Username and password are required.', 'warning')
         return redirect(url_for('main.admin_users'))
 
     if User.query.filter_by(username=username).first():
-        flash('Username already exists.', 'danger')
-    elif User.query.filter_by(email=email).first():
-        flash('Email address already in use.', 'danger')
-    else:
+        flash('Username already exists in the local database.', 'danger')
+        return redirect(url_for('main.admin_users'))
+
+    if auth_type == 'local':
+        if not email:
+            flash('Email is required for local users.', 'warning')
+            return redirect(url_for('main.admin_users'))
+        if User.query.filter_by(email=email).first():
+            flash('Email address already in use.', 'danger')
+            return redirect(url_for('main.admin_users'))
+
         user = User(username=username, email=email, auth_source='local')
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        flash('User added successfully.', 'success')
+        flash('Local user added successfully.', 'success')
+
+    elif auth_type == 'ldap':
+        given_name = request.form.get('given_name')
+        surname = request.form.get('surname')
+        if not all([given_name, surname, email]):
+            flash('Given Name, Surname, and Email are required for LDAP users.', 'warning')
+            return redirect(url_for('main.admin_users'))
+
+        if add_ldap_user(username, password, email, given_name, surname):
+            user = User(username=username, email=email, auth_source='ldap')
+            db.session.add(user)
+            db.session.commit()
+            flash('LDAP user added successfully.', 'success')
+
     return redirect(url_for('main.admin_users'))
 
 @bp.route('/admin/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_user(user_id):
-    if user_id == 1: # Prevent deleting admin
+    if user_id == 1:
         flash('Cannot delete the primary admin user.', 'danger')
         return redirect(url_for('main.admin_users'))
+
     user = User.query.get_or_404(user_id)
+
+    if user.auth_source == 'ldap':
+        if not delete_ldap_user(user.username):
+            flash('Failed to delete user from LDAP. Aborting.', 'danger')
+            return redirect(url_for('main.admin_users'))
+
     db.session.delete(user)
     db.session.commit()
-    flash('User deleted successfully.', 'success')
+    flash(f'User {user.username} deleted successfully.', 'success')
     return redirect(url_for('main.admin_users'))
 
 @bp.route('/admin/force_reset/<int:user_id>', methods=['POST'])
