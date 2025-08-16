@@ -39,7 +39,31 @@ def create_app(config_class=Config):
     oauth.init_app(app)
 
     # --- Register OAuth Providers ---
-    # (Omitted for brevity, no changes here)
+    if app.config['GOOGLE_CLIENT_ID'] and app.config['GOOGLE_CLIENT_SECRET']:
+        oauth.register(
+            name='google',
+            client_id=app.config['GOOGLE_CLIENT_ID'],
+            client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            client_kwargs={'scope': 'openid email profile'}
+        )
+    if app.config['KEYCLOAK_CLIENT_ID'] and app.config['KEYCLOAK_SERVER_URL']:
+        oauth.register(
+            name='keycloak',
+            client_id=app.config['KEYCLOAK_CLIENT_ID'],
+            client_secret=app.config['KEYCLOAK_CLIENT_SECRET'],
+            server_metadata_url=f"{app.config['KEYCLOAK_SERVER_URL']}/.well-known/openid-configuration",
+            client_kwargs={'scope': 'openid email profile'}
+        )
+    if app.config['AUTHENTIK_CLIENT_ID'] and app.config['AUTHENTIK_SERVER_URL']:
+        oauth.register(
+            name='authentik',
+            client_id=app.config['AUTHENTIK_CLIENT_ID'],
+            client_secret=app.config['AUTHENTIK_CLIENT_SECRET'],
+            server_metadata_url=f"{app.config['AUTHENTIK_SERVER_URL']}/.well-known/openid-configuration",
+            client_kwargs={'scope': 'openid email profile'}
+        )
+
 
     # Make the config available to all templates.
     @app.context_processor
@@ -62,7 +86,8 @@ def create_app(config_class=Config):
                 return redirect(url_for('auth.reset_password'))
 
     # --- Start Background Scheduler ---
-    from app.scheduler import refresh_ldap_cache
+    # CORRECTED: Import from the renamed 'jobs.py' file
+    from app.jobs import refresh_ldap_cache
 
     # Run the job once on startup to ensure cache is populated immediately
     with app.app_context():
