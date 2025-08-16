@@ -356,6 +356,10 @@ def add_user():
             flash('Given Name, Surname, and Email are required for LDAP users.', 'warning')
             return redirect(url_for('main.admin_users'))
 
+        if User.query.filter_by(email=email).first():
+            flash('Email address already in use by another user.', 'danger')
+            return redirect(url_for('main.admin_users'))
+
         if add_ldap_user(username, password, email, given_name, surname):
             user = User(username=username, email=email, auth_source='ldap')
             db.session.add(user)
