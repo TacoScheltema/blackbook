@@ -12,3 +12,4 @@ Authlib
 Werkzeug
 Requests
 Flask-Migrate
+APScheduler

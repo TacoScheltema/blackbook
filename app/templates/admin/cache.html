@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Cache Status</h2>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <p>The application uses a background job to periodically refresh the contact list from the LDAP server. This ensures the application remains fast for all users.</p>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Job ID</th>
+                        <th>Next Run Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td>{{ job.id }}</td>
+                        <td>{{ job.next_run_time }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2">No scheduled jobs found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

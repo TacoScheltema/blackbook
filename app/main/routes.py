@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app.main import bp
 from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry
 from app.models import User
-from app import db, cache
+from app import db, cache, scheduler
 
 def get_config(key):
     """Helper to safely get config values."""
@@ -59,7 +59,6 @@ def index():
             db.session.commit()
     else:
         # If no valid page size in request, use the one stored for the user.
-        # This can be None for old users.
         page_size = current_user.page_size
 
     # If, after all that, page_size is still None (e.g., for a pre-existing user),
@@ -131,7 +130,7 @@ def index():
 def all_companies():
     """Displays a list of unique company names derived from the contacts."""
     letter = request.args.get('letter', '')
-    all_people = get_all_people_cached()
+    all_people = cache.get('all_people') or []
     company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
 
     # Create a unique, sorted list of company names
@@ -182,14 +181,13 @@ def company_detail(b64_company_name):
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
-    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
-    person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
+    all_people = cache.get('all_people') or []
     company_link_attr = get_config('LDAP_COMPANY_LINK_ATTRIBUTE')
-    contacts_dn = get_config('LDAP_CONTACTS_DN')
 
-    # Search for all people where their company attribute matches the company name
-    employee_filter = f'(& (objectClass={person_class}) ({company_link_attr}={company_name}) )'
-    employees = search_ldap(employee_filter, person_attrs, search_base=contacts_dn)
+    employees = [
+        p for p in all_people 
+        if p.get(company_link_attr) and p[company_link_attr][0] == company_name
+    ]
 
     return render_template('company_detail.html', 
                            title=f"Company: {company_name}", 
@@ -316,6 +314,14 @@ def admin_users():
         return redirect(url_for('main.index'))
     users = User.query.filter(User.auth_source == 'local').all()
     return render_template('admin/users.html', title='Manage Users', users=users)
+
+@bp.route('/admin/cache')
+@login_required
+@admin_required
+def admin_cache():
+    """Displays the status of the background caching job."""
+    jobs = scheduler.get_jobs()
+    return render_template('admin/cache.html', title='Cache Status', jobs=jobs)
 
 @bp.route('/admin/add_user', methods=['POST'])
 @login_required

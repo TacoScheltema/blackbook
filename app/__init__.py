@@ -1,19 +1,22 @@
 import base64
+import atexit
 from flask import Flask, request, redirect, url_for
 from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
 from authlib.integrations.flask_client import OAuth
+from apscheduler.schedulers.background import BackgroundScheduler
 from config import Config
 
 # Initialize extensions
 cache = Cache()
 db = SQLAlchemy()
-migrate = Migrate() # Initialize Migrate
+migrate = Migrate()
 login_manager = LoginManager()
-login_manager.login_view = 'auth.login' # Redirect to this page if user is not logged in
+login_manager.login_view = 'auth.login'
 oauth = OAuth()
+scheduler = BackgroundScheduler()
 
 def b64encode_filter(s):
     """Jinja2 filter to base64 encode a string."""
@@ -31,7 +34,7 @@ def create_app(config_class=Config):
     # Initialize extensions with the app
     cache.init_app(app)
     db.init_app(app)
-    migrate.init_app(app, db) # Initialize Migrate with app and db
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     oauth.init_app(app)
 
@@ -61,6 +64,7 @@ def create_app(config_class=Config):
             client_kwargs={'scope': 'openid email profile'}
         )
 
+
     # Make the config available to all templates.
     @app.context_processor
     def inject_config():
@@ -77,11 +81,26 @@ def create_app(config_class=Config):
 
     @app.before_request
     def before_request_hook():
-        # This function runs before every request.
-        # If the user is logged in and needs to reset their password,
-        # it redirects them to the reset page, unless they are already there.
         if current_user.is_authenticated and current_user.password_reset_required:
             if request.endpoint and request.endpoint not in ['auth.reset_password', 'auth.logout', 'static']:
                 return redirect(url_for('auth.reset_password'))
+
+    # --- Start Background Scheduler ---
+    # CORRECTED: Import from the renamed 'jobs.py' file
+    from app.jobs import refresh_ldap_cache
+
+    # Run the job once on startup to ensure cache is populated immediately
+    with app.app_context():
+        refresh_ldap_cache(app)
+
+    scheduler.add_job(
+        func=refresh_ldap_cache, 
+        args=[app], 
+        trigger="interval", 
+        seconds=app.config['CACHE_REFRESH_INTERVAL']
+    )
+    scheduler.start()
+    # Ensure the scheduler is shut down when the app exits
+    atexit.register(lambda: scheduler.shutdown())
 
     return app
