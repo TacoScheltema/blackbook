@@ -22,6 +22,20 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@cache.memoize()
+def get_all_people_cached():
+    """
+    A cached function to get all people from LDAP.
+    This will use the ADDRESSBOOK_FILTER from the .env file if it is set.
+    """
+    print("CACHE MISS: Fetching all people from LDAP server...")
+    person_class = get_config('LDAP_PERSON_OBJECT_CLASS')
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
+    search_filter = f"(objectClass={person_class})"
+    # Use the specific contacts DN from the config for the search base
+    contacts_dn = get_config('LDAP_CONTACTS_DN')
+    return search_ldap(search_filter, person_attrs, search_base=contacts_dn)
+
 @bp.route('/')
 @login_required
 def index():
@@ -57,9 +71,7 @@ def index():
     except ValueError:
         page = 1
 
-    # Get the full list of people directly from the cache.
-    # The background job is responsible for keeping this fresh.
-    all_people = cache.get('all_people') or []
+    all_people = get_all_people_cached()
 
     if search_query:
         query = search_query.lower()
@@ -182,7 +194,115 @@ def company_detail(b64_company_name):
                            company_name=company_name,
                            employees=employees)
 
-# ... (other routes remain the same) ...
+@bp.route('/person/<b64_dn>')
+@login_required
+def person_detail(b64_dn):
+    """Displays details for a single person."""
+    try:
+        dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
+    except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
+    person = get_entry_by_dn(dn, person_attrs)
+    if not person:
+        abort(404)
+
+    person_name = person.get('cn', ['Unknown'])[0]
+
+    # Capture all relevant query params to pass them back for the "back" button
+    back_params = {
+        'page': request.args.get('page'),
+        'page_size': request.args.get('page_size'),
+        'q': request.args.get('q'),
+        'sort_by': request.args.get('sort_by'),
+        'sort_order': request.args.get('sort_order')
+    }
+    back_params = {k: v for k, v in back_params.items() if v is not None}
+
+    return render_template('person_detail.html', 
+                           title=person_name, 
+                           person=person, 
+                           b64_dn=b64_dn,
+                           back_params=back_params)
+
+@bp.route('/person/vcard/<b64_dn>')
+@login_required
+def person_vcard(b64_dn):
+    """Generates and returns a vCard file for a person."""
+    try:
+        dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
+    except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
+    person = get_entry_by_dn(dn, person_attrs)
+    if not person:
+        abort(404)
+
+    # Helper to safely get the first value of an attribute
+    get_val = lambda attr: (person.get(attr) or [''])[0]
+
+    vcard = f"""BEGIN:VCARD
+VERSION:3.0
+FN:{get_val('cn')}
+N:{get_val('sn')};{get_val('givenName')};;;
+ORG:{get_val('o')}
+EMAIL;TYPE=WORK,INTERNET:{get_val('mail')}
+TEL;TYPE=WORK,VOICE:{get_val('telephoneNumber')}
+ADR;TYPE=WORK:;;{get_val('street')};{get_val('l')};;{get_val('postalCode')};
+END:VCARD"""
+
+    filename = f"{get_val('cn').replace(' ', '_')}.vcf"
+
+    return Response(
+        vcard,
+        mimetype="text/vcard",
+        headers={"Content-disposition": f"attachment; filename={filename}"}
+    )
+
+@bp.route('/person/edit/<b64_dn>', methods=['GET', 'POST'])
+@login_required
+def edit_person(b64_dn):
+    """Handles editing of a person entry."""
+    try:
+        dn = base64.urlsafe_b64decode(b64_dn).decode('utf-8')
+    except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    person_attrs = get_config('LDAP_PERSON_ATTRIBUTES')
+    current_person = get_entry_by_dn(dn, person_attrs)
+    if not current_person:
+        abort(404)
+
+    if request.method == 'POST':
+        changes = {}
+        for attr in person_attrs:
+            form_value = request.form.get(attr)
+
+            if form_value is not None:
+                attr_exists = current_person.get(attr)
+                current_value = (attr_exists or [None])[0]
+
+                if form_value and form_value != current_value:
+                    changes[attr] = [(ldap3.MODIFY_REPLACE, [form_value])]
+                elif not form_value and attr_exists:
+                    changes[attr] = [(ldap3.MODIFY_DELETE, [])]
+
+        if not changes:
+            flash('No changes were submitted.', 'info')
+        elif modify_ldap_entry(dn, changes):
+            flash('Person details updated successfully!', 'success')
+            cache.clear() # Clear the cache after a successful modification
+
+        return redirect(url_for('main.person_detail', b64_dn=b64_dn))
+
+    company_class = get_config('LDAP_COMPANY_OBJECT_CLASS')
+    company_filter = f'(objectClass={company_class})'
+    companies = search_ldap(company_filter, ['o'], size_limit=200)
+
+    person_name = current_person.get('cn', ['Unknown'])[0]
+    return render_template('edit_person.html', title=f"Edit {person_name}", person=current_person, companies=companies, b64_dn=b64_dn)
 
 # --- Admin Routes ---
 
@@ -203,4 +323,42 @@ def admin_cache():
     jobs = scheduler.get_jobs()
     return render_template('admin/cache.html', title='Cache Status', jobs=jobs)
 
-# ... (other admin routes remain the same) ...
+@bp.route('/admin/add_user', methods=['POST'])
+@login_required
+@admin_required
+def add_user():
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    if User.query.filter_by(username=username).first():
+        flash('Username already exists.', 'danger')
+    else:
+        user = User(username=username, email=email, auth_source='local')
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        flash('User added successfully.', 'success')
+    return redirect(url_for('main.admin_users'))
+
+@bp.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_user(user_id):
+    if user_id == 1: # Prevent deleting admin
+        flash('Cannot delete the primary admin user.', 'danger')
+        return redirect(url_for('main.admin_users'))
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    flash('User deleted successfully.', 'success')
+    return redirect(url_for('main.admin_users'))
+
+@bp.route('/admin/force_reset/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def force_reset_password(user_id):
+    user = User.query.get_or_404(user_id)
+    user.password_reset_required = True
+    db.session.commit()
+    flash(f'Password reset has been forced for {user.username}.', 'info')
+    return redirect(url_for('main.admin_users'))
