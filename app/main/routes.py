@@ -5,7 +5,7 @@ from functools import wraps
 from flask import Response, render_template, current_app, abort, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app.main import bp
-from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry, delete_ldap_user, add_ldap_user
+from app.ldap_utils import search_ldap, get_entry_by_dn, add_ldap_entry, modify_ldap_entry, delete_ldap_user, add_ldap_user, set_ldap_password
 from app.models import User
 from app import db, cache, scheduler
 
@@ -392,7 +392,13 @@ def delete_user(user_id):
 @admin_required
 def force_reset_password(user_id):
     user = User.query.get_or_404(user_id)
+
+    if user.auth_source == 'ldap':
+        if not set_ldap_password(user.username, 'changeme'):
+            flash('Failed to reset LDAP password.', 'danger')
+            return redirect(url_for('main.admin_users'))
+
     user.password_reset_required = True
     db.session.commit()
-    flash(f'Password reset has been forced for {user.username}.', 'info')
+    flash(f'Password reset has been forced for {user.username}. They will need to log in with the password "changeme".', 'info')
     return redirect(url_for('main.admin_users'))

@@ -59,11 +59,14 @@
                     <tbody>
                         {% for user in ldap_users %}
                         <tr>
-                            <td>{{ user.username }}</td>
+                            <td>{{ user.username }} {% if user.password_reset_required %}<span class="badge bg-warning text-dark">Reset Required</span>{% endif %}</td>
                             <td>{{ user.email or 'N/A' }}</td>
                             <td>
                                 <form action="{{ url_for('main.delete_user', user_id=user.id) }}" method="post" class="d-inline">
                                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('This will delete the user from both the local database and LDAP. Are you sure?');">Delete</button>
+                                </form>
+                                <form action="{{ url_for('main.force_reset_password', user_id=user.id) }}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-warning btn-sm">Force Reset</button>
                                 </form>
                             </td>
                         </tr>

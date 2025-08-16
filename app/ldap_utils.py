@@ -71,7 +71,6 @@ def add_ldap_user(username, password, email, given_name, surname):
 
     object_classes = ['inetOrgPerson', 'organizationalPerson', 'person', 'top']
 
-    # Hash the password before storing it
     hashed_password = hash_password_ssha(password)
 
     attributes = {
@@ -120,6 +119,33 @@ def delete_ldap_user(username):
         return True
     except LDAPException as e:
         flash(f"An exception occurred: {e}", 'danger')
+        return False
+    finally:
+        if conn:
+            conn.unbind()
+
+def set_ldap_password(username, new_password):
+    """Sets/resets the password for an LDAP user."""
+    user_dn_template = current_app.config.get('LDAP_USER_DN_TEMPLATE')
+    if not user_dn_template:
+        flash('LDAP user DN template is not configured.', 'danger')
+        return False
+
+    user_dn = user_dn_template.format(username=username)
+    hashed_password = hash_password_ssha(new_password)
+
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+
+    try:
+        success = conn.modify(user_dn, {'userPassword': [(ldap3.MODIFY_REPLACE, [hashed_password])]})
+        if not success:
+            flash(f"LDAP Error: {conn.result['description']}", 'danger')
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred while setting LDAP password: {e}", 'danger')
         return False
     finally:
         if conn:
