@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block navbar_buttons %}
+<a href="{{ url_for('main.index') }}" class="btn btn-outline-light me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Address Book">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
+      <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.274.274H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.828.218-.286.496-.542.79-.742zM6.5 7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm0-4a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"/>
+    </svg>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="d-flex align-items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-building me-2" viewBox="0 0 16 16">
+          <path d="M4 2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1ZM4 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM7.5 5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM4.5 8a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Z"/>
+          <path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V1Zm11 0H3v14h3v-2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V15h3V1Z"/>
+        </svg>
+        Companies
+    </h2>
+</div>
+
+<!-- Alphabetical Pager -->
+<nav aria-label="Alphabetical navigation" class="mb-3">
+    <ul class="pagination pagination-sm justify-content-center flex-wrap">
+        <li class="page-item {% if not letter %}active{% endif %}"><a class="page-link" href="{{ url_for('main.all_companies') }}">All</a></li>
+        {% for char in alphabet %}
+            <li class="page-item {% if letter == char %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('main.all_companies', letter=char) }}">{{ char }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+</nav>
+
+<!-- Pagination Controls for Companies -->
+{% if total_pages > 1 %}
+<nav aria-label="Company page navigation" class="mb-3">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('main.all_companies', page=page-1, letter=letter) }}">Previous</a>
+        </li>
+        {% for p in page_numbers %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('main.all_companies', page=p, letter=letter) }}">{{ p }}</a>
+            </li>
+        {% endfor %}
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('main.all_companies', page=page+1, letter=letter) }}">Next</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+<div class="table-responsive shadow-sm rounded">
+    <table class="table table-striped table-hover table-sm mb-0 align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Company</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if companies %}
+                {% for company_name in companies %}
+                <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.company_detail', b64_company_name=company_name|b64encode) }}';">
+                    <td>{{ company_name }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td class="text-center p-4">No companies found.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

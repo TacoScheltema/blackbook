@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 
 {% block navbar_buttons %}
-<a href="{{ url_for('main.index') }}" class="btn btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Back to Address Book">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-book" viewBox="0 0 16 16">
-        <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.887 3.112-.752 1.234.124 2.503.523 3.388.893v9.823c-.908-.349-2.107-.652-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015 1.232 5.587.81 4.5.77c-1.255-.04-2.51.196-3.5.571V14.5c.99-.375 2.245-.64 3.5-.57 1.255.07 2.486.42 3.5.97V1.783z"/>
+<a href="{{ url_for('main.all_companies') }}" class="btn btn-outline-light" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Back to Companies">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-building" viewBox="0 0 16 16">
+      <path d="M4 2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1ZM4 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM7.5 5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM4.5 8a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Z"/>
+      <path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V1Zm11 0H3v14h3v-2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V15h3V1Z"/>
     </svg>
 </a>
 {% endblock %}
@@ -11,40 +12,22 @@
 {% block content %}
 <div class="card shadow-sm">
     <div class="card-header bg-dark text-white">
-        <h1 class="my-2">{{ company.o[0] if company.o else 'Company Details' }}</h1>
+        <h1 class="my-2">{{ company_name }}</h1>
     </div>
     <div class="card-body">
-        <h5 class="card-title">Description</h5>
-        <p class="card-text">{{ company.description[0] if company.description else 'N/A' }}</p>
-
-        <h5 class="card-title mt-4">Address</h5>
-        <p class="card-text">
-            {% if company.street and company.street[0] %}
-                {{ company.street[0] }}<br>
-            {% endif %}
-            {% if company.l and company.l[0] %}
-                {{ company.l[0] }}{% if company.st and company.st[0] %}, {{ company.st[0] }}{% endif %} {{ company.postalCode[0] if company.postalCode and company.postalCode[0] }}
+        <h5 class="card-title">Employees</h5>
+        <div class="list-group shadow-sm">
+            {% if employees %}
+                {% for employee in employees %}
+                <a href="{{ url_for('main.person_detail', b64_dn=employee.dn|b64encode) }}" class="list-group-item list-group-item-action">
+                    <strong>{{ employee.cn[0] if employee.cn else 'Unnamed Person' }}</strong><br>
+                    <small class="text-muted">{{ (employee.mail[0] if employee.mail else 'No email') }} | {{ (employee.telephoneNumber[0] if employee.telephoneNumber else 'No phone') }}</small>
+                </a>
+                {% endfor %}
             {% else %}
-                N/A
+                <div class="list-group-item">No employees found for this company.</div>
             {% endif %}
-        </p>
-    </div>
-</div>
-
-<div class="mt-4">
-    <h2>Employees</h2>
-    <div class="list-group shadow-sm">
-        {% if employees %}
-            {% for employee in employees %}
-            <a href="{{ url_for('main.person_detail', b64_dn=employee.dn|b64encode) }}" class="list-group-item list-group-item-action">
-                <strong>{{ employee.cn[0] if employee.cn else 'Unnamed Person' }}</strong><br>
-                <small class="text-muted">{{ (employee.mail[0] if employee.mail else 'No email') }} | {{ (employee.telephoneNumber[0] if employee.telephoneNumber else 'No phone') }}</small>
-            </a>
-            {% endfor %}
-        {% else %}
-            <div class="list-group-item">No employees found for this company.</div>
-        {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}
-

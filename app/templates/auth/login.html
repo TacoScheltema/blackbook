@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h3 class="my-2">Sign In</h3>
+            </div>
+            <div class="card-body">
+                <!-- Local and LDAP Login Tabs -->
+                {% if config.ENABLE_LOCAL_LOGIN or config.ENABLE_LDAP_LOGIN %}
+                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    {% if config.ENABLE_LOCAL_LOGIN %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="local-tab" data-bs-toggle="tab" data-bs-target="#local" type="button" role="tab" aria-controls="local" aria-selected="true">Local Account</button>
+                    </li>
+                    {% endif %}
+                    {% if config.ENABLE_LDAP_LOGIN %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if not config.ENABLE_LOCAL_LOGIN %}active{% endif %}" id="ldap-tab" data-bs-toggle="tab" data-bs-target="#ldap" type="button" role="tab" aria-controls="ldap" aria-selected="false">LDAP</button>
+                    </li>
+                    {% endif %}
+                </ul>
+                <div class="tab-content p-3 border border-top-0 rounded-bottom" id="myTabContent">
+                    {% if config.ENABLE_LOCAL_LOGIN %}
+                    <!-- Local Login Form -->
+                    <div class="tab-pane fade show active" id="local" role="tabpanel" aria-labelledby="local-tab">
+                        <form action="" method="post" novalidate>
+                            <input type="hidden" name="auth_type" value="local">
+                            <div class="mb-3">
+                                <label for="local_username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="local_username" name="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="local_password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="local_password" name="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Sign In with Local Account</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                    {% if config.ENABLE_LDAP_LOGIN %}
+                    <!-- LDAP Login Form -->
+                    <div class="tab-pane fade {% if not config.ENABLE_LOCAL_LOGIN %}show active{% endif %}" id="ldap" role="tabpanel" aria-labelledby="ldap-tab">
+                        <form action="" method="post" novalidate>
+                            <input type="hidden" name="auth_type" value="ldap">
+                            <div class="mb-3">
+                                <label for="ldap_username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="ldap_username" name="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="ldap_password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="ldap_password" name="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Sign In with LDAP</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="text-center mt-3">
+                    {% if config.ENABLE_LOCAL_LOGIN or config.ENABLE_LDAP_LOGIN %}
+                    <a href="{{ url_for('auth.request_password_reset') }}">Forgot Password?</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- SSO Providers -->
+                <div class="mt-4 text-center">
+                    <p class="text-muted">
+                        {% if config.ENABLE_LOCAL_LOGIN or config.ENABLE_LDAP_LOGIN %}
+                            Or sign in with
+                        {% else %}
+                            Sign in with
+                        {% endif %}
+                    </p>
+                    {% if config.GOOGLE_CLIENT_ID %}
+                    <a href="{{ url_for('auth.sso_login', provider='google') }}" class="btn btn-outline-danger mb-2 w-100">
+                        Sign In with Google
+                    </a>
+                    {% endif %}
+                    {% if config.KEYCLOAK_CLIENT_ID %}
+                    <a href="{{ url_for('auth.sso_login', provider='keycloak') }}" class="btn btn-outline-dark mb-2 w-100">
+                        Sign In with Keycloak
+                    </a>
+                    {% endif %}
+                    {% if config.AUTHENTIK_CLIENT_ID %}
+                    <a href="{{ url_for('auth.sso_login', provider='authentik') }}" class="btn btn-outline-info w-100">
+                        Sign In with Authentik
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

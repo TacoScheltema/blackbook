@@ -1,3 +1,4 @@
+# filename: requirements.txt
 # Install these dependencies using: pip install -r requirements.txt
 
 Flask
@@ -5,4 +6,14 @@ python-dotenv
 ldap3
 gunicorn
 Flask-Caching
+Flask-Login
+Flask-SQLAlchemy
+Authlib
+# Werkzeug is installed with Flask, but we specify it for password hashing consistency
+Werkzeug
+Requests
+Flask-Migrate
+APScheduler
+Flask-Mail
 
+# end file

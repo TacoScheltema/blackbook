@@ -1,64 +1,178 @@
 import ldap3
-# Only the base LDAPException is needed for connection errors.
-# Operational errors are handled by checking the connection result.
+import hashlib
+import os
+import base64
 from ldap3.core.exceptions import LDAPException
 from flask import current_app, flash
 
-def get_ldap_connection():
+def hash_password_ssha(password):
+    """Hashes a password using the SSHA (Salted SHA-1) scheme."""
+    salt = os.urandom(4)
+    # Concatenate password and salt, then hash
+    h = hashlib.sha1(password.encode('utf-8'))
+    h.update(salt)
+    # Concatenate hash and salt for storage
+    hashed_password = h.digest() + salt
+    # Base64 encode and format for LDAP
+    return b'{SSHA}' + base64.b64encode(hashed_password)
+
+def get_ldap_connection(user_dn=None, password=None, read_only=False):
     """
-    Establishes a connection to the LDAP server using settings from the app config.
+    Establishes a connection to the LDAP server.
+    Can bind with the admin user from config or a specific user for authentication.
     """
+    server_uri = current_app.config.get('LDAP_SERVER')
+    use_ssl = current_app.config.get('LDAP_USE_SSL', False)
+
+    if user_dn is None:
+        user_dn = current_app.config.get('LDAP_BIND_DN')
+        password = current_app.config.get('LDAP_BIND_PASSWORD')
+
     try:
-        use_ssl = current_app.config.get('LDAP_USE_SSL', False)
-        server = ldap3.Server(
-            current_app.config['LDAP_SERVER'],
-            get_info=ldap3.ALL,
-            use_ssl=use_ssl
-        )
-        # raise_exceptions is False by default, which is the correct
-        # pattern for checking conn.result after an operation.
+        server = ldap3.Server(server_uri, get_info=ldap3.ALL, use_ssl=use_ssl)
         connection = ldap3.Connection(
             server,
-            user=current_app.config['LDAP_BIND_DN'],
-            password=current_app.config['LDAP_BIND_PASSWORD'],
+            user=user_dn,
+            password=password,
             auto_bind=True,
-            read_only=False
+            read_only=read_only
         )
         return connection
     except LDAPException as e:
-        print(f"Failed to connect to LDAP server: {e}")
-        flash('Could not connect to the LDAP server.', 'danger')
+        print(f"Failed to connect or bind to LDAP server: {e}")
         return None
 
-def search_ldap(filter_str, attributes, size_limit=0):
+def authenticate_ldap_user(username, password):
     """
-    Performs a search on the LDAP directory.
-    Pagination is handled in the route by slicing the full result set.
+    Attempts to bind to the LDAP server with a given username and password.
+    Returns True if successful, False otherwise.
+    """
+    user_dn_template = current_app.config.get('LDAP_USER_DN_TEMPLATE')
+    if not user_dn_template:
+        flash('LDAP user DN template is not configured.', 'danger')
+        return False
 
-    :param filter_str: The LDAP search filter string.
-    :param attributes: A list of attributes to retrieve for each entry.
-    :param size_limit: The maximum number of entries to return (0 for no limit).
-    :return: A list of entry dictionaries or an empty list on error.
-    """
+    user_dn = user_dn_template.format(username=username)
+
+    conn = get_ldap_connection(user_dn=user_dn, password=password)
+    if conn:
+        conn.unbind()
+        return True
+    return False
+
+def add_ldap_user(username, password, email, given_name, surname):
+    """Adds a new user to the LDAP directory with a hashed password."""
+    user_dn_template = current_app.config.get('LDAP_USER_DN_TEMPLATE')
+    if not user_dn_template:
+        flash('LDAP user DN template is not configured.', 'danger')
+        return False
+
+    user_dn = user_dn_template.format(username=username)
+
+    object_classes = ['inetOrgPerson', 'organizationalPerson', 'person', 'top']
+
+    hashed_password = hash_password_ssha(password)
+
+    attributes = {
+        'cn': f"{given_name} {surname}",
+        'sn': surname,
+        'givenName': given_name,
+        'mail': email,
+        'userPassword': hashed_password
+    }
+
     conn = get_ldap_connection()
     if not conn:
+        return False
+
+    try:
+        success = conn.add(user_dn, object_classes, attributes)
+        if not success:
+            flash(f"LDAP Error: {conn.result['description']}", 'danger')
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred: {e}", 'danger')
+        return False
+    finally:
+        if conn:
+            conn.unbind()
+
+def delete_ldap_user(username):
+    """Deletes a user from the LDAP directory."""
+    user_dn_template = current_app.config.get('LDAP_USER_DN_TEMPLATE')
+    if not user_dn_template:
+        flash('LDAP user DN template is not configured.', 'danger')
+        return False
+
+    user_dn = user_dn_template.format(username=username)
+
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+
+    try:
+        success = conn.delete(user_dn)
+        if not success:
+            flash(f"LDAP Error: {conn.result['description']}", 'danger')
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred: {e}", 'danger')
+        return False
+    finally:
+        if conn:
+            conn.unbind()
+
+def set_ldap_password(username, new_password):
+    """Sets/resets the password for an LDAP user."""
+    user_dn_template = current_app.config.get('LDAP_USER_DN_TEMPLATE')
+    if not user_dn_template:
+        flash('LDAP user DN template is not configured.', 'danger')
+        return False
+
+    user_dn = user_dn_template.format(username=username)
+    hashed_password = hash_password_ssha(new_password)
+
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+
+    try:
+        success = conn.modify(user_dn, {'userPassword': [(ldap3.MODIFY_REPLACE, [hashed_password])]})
+        if not success:
+            flash(f"LDAP Error: {conn.result['description']}", 'danger')
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred while setting LDAP password: {e}", 'danger')
+        return False
+    finally:
+        if conn:
+            conn.unbind()
+
+def search_ldap(filter_str, attributes, size_limit=0, search_base=None):
+    """
+    Performs a search on the LDAP directory using the admin credentials.
+    """
+    conn = get_ldap_connection(read_only=True)
+    if not conn:
         return []
-    
-    base_dn = current_app.config['LDAP_BASE_DN']
-    
+
+    if search_base is None:
+        search_base = current_app.config['LDAP_BASE_DN']
+
     try:
         conn.search(
-            search_base=base_dn,
+            search_base=search_base,
             search_filter=filter_str,
             attributes=attributes,
             size_limit=size_limit
         )
         results = []
         for entry in conn.entries:
-            # Convert ldap3 entry object to a more usable dictionary
             result_dict = {'dn': entry.entry_dn}
             for attr in attributes:
-                # Store all values for an attribute in a list.
                 result_dict[attr] = entry[attr].values if entry[attr] else []
             results.append(result_dict)
         return results
@@ -74,10 +188,10 @@ def get_entry_by_dn(dn, attributes):
     """
     Retrieves a single entry by its Distinguished Name (DN).
     """
-    conn = get_ldap_connection()
+    conn = get_ldap_connection(read_only=True)
     if not conn:
         return None
-    
+
     try:
         conn.search(
             search_base=dn,
@@ -107,7 +221,7 @@ def add_ldap_entry(dn, object_classes, attributes):
     conn = get_ldap_connection()
     if not conn:
         return False
-    
+
     try:
         success = conn.add(dn, object_class=object_classes, attributes=attributes)
         if not success:
@@ -135,7 +249,7 @@ def modify_ldap_entry(dn, changes):
     conn = get_ldap_connection()
     if not conn:
         return False
-    
+
     try:
         success = conn.modify(dn, changes)
         if not success:
@@ -154,4 +268,3 @@ def modify_ldap_entry(dn, changes):
     finally:
         if conn:
             conn.unbind()
-

@@ -1,23 +1,40 @@
 {% extends "base.html" %}
 
 {% block navbar_buttons %}
-<a href="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" class="btn btn-outline-primary me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Edit Person">
+<a href="{{ url_for('main.index', **back_params) }}" class="btn btn-outline-light me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Back to Address Book">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
+      <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.274.274H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.828.218-.286.496-.542.79-.742zM6.5 7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm0-4a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"/>
+    </svg>
+</a>
+<a href="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" class="btn btn-outline-light me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Edit Person">
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
       <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.813z"/>
       <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
-    </svg>
-</a>
-<a href="{{ url_for('main.index') }}" class="btn btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Back to Address Book">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-book" viewBox="0 0 16 16">
-        <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.887 3.112-.752 1.234.124 2.503.523 3.388.893v9.823c-.908-.349-2.107-.652-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015 1.232 5.587.81 4.5.77c-1.255-.04-2.51.196-3.5.571V14.5c.99-.375 2.245-.64 3.5-.57 1.255.07 2.486.42 3.5.97V1.783z"/>
     </svg>
 </a>
 {% endblock %}
 
 {% block content %}
 <div class="card shadow-sm">
-    <div class="card-header bg-dark text-white">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h1 class="my-2">{{ person.cn[0] if person.cn else 'Person Details' }}</h1>
+        <div>
+            <a href="{{ url_for('main.person_vcard', b64_dn=b64_dn) }}" class="btn btn-outline-light" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Download vCard">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-vcard" viewBox="0 0 16 16">
+                  <path d="M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm4-2.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5ZM9 8a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4A.5.5 0 0 1 9 8Zm1 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5Z"/>
+                  <path d="M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H2ZM1 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8.96c.026-.163.04-.33.04-.5C9 10.567 7.21 9 5 9c-2.086 0-3.8 1.398-3.984 3.181A1.006 1.006 0 0 1 1 12V4Z"/>
+                </svg>
+            </a>
+            <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#qrCodeModal" onclick="generateVCardQR()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-qr-code-scan" viewBox="0 0 16 16">
+                  <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5ZM4 4h1v1H4V4Z"/>
+                  <path d="M7 2H2v5h5V2ZM3 3h3v3H3V3Zm2 8.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Zm-2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Zm-2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Z"/>
+                  <path d="M7 9H2v5h5V9Zm-4 1h3v3H3v-3Zm8-6h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm11-1h1v1h-1V3Zm-1 0h1v1h-1V3Zm-1 0h1v1h-1V3Zm-1 0h1v1h-1V3Zm-1 0h1v1h-1V3Z"/>
+                  <path d="M9 2h5v5H9V2Zm1 1v3h3V3h-3ZM8 8.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Zm2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Zm2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Z"/>
+                  <path d="M9 9h5v5H9V9Zm1 1v3h3v-3h-3Z"/>
+                </svg>
+            </button>
+        </div>
     </div>
     <div class="card-body">
         <dl class="row">
@@ -31,6 +48,8 @@
                         {% set values = person[attr_name] %}
                         {% if attr_name == 'mail' and values[0] %}
                             <a href="mailto:{{ values[0] }}">{{ values[0] }}</a>
+                        {% elif attr_name == 'telephoneNumber' and values[0] %}
+                            <a href="callto:{{ values[0] }}">{{ values[0] }}</a>
                         {% else %}
                             {{ values | join(', ') }}
                         {% endif %}
@@ -40,5 +59,52 @@
         </dl>
     </div>
 </div>
-{% endblock %}
 
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="qrCodeModalLabel">Contact QR Code for {{ person.cn[0] if person.cn }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="qrcode" class="d-flex justify-content-center"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+function generateVCardQR() {
+    const person = {{ person|tojson }};
+
+    let vCard = `BEGIN:VCARD
+VERSION:3.0
+FN:${person.cn ? person.cn[0] : ''}
+N:${person.sn ? person.sn[0] : ''};${person.givenName ? person.givenName[0] : ''};;;
+`;
+    if (person.o && person.o[0]) {
+        vCard += `ORG:${person.o[0]}\n`;
+    }
+    if (person.mail && person.mail[0]) {
+        vCard += `EMAIL;TYPE=WORK,INTERNET:${person.mail[0]}\n`;
+    }
+    if (person.telephoneNumber && person.telephoneNumber[0]) {
+        vCard += `TEL;TYPE=WORK,VOICE:${person.telephoneNumber[0]}\n`;
+    }
+    vCard += `END:VCARD`;
+
+    // Clear previous QR code if it exists
+    document.getElementById('qrcode').innerHTML = '';
+
+    new QRCode(document.getElementById('qrcode'), {
+        text: vCard,
+        width: 256,
+        height: 256,
+        correctLevel: QRCode.CorrectLevel.M
+    });
+}
+</script>
+{% endblock %}
