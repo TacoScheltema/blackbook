@@ -52,7 +52,7 @@ def create_app(config_class=Config):
             client_id=app.config["GOOGLE_CLIENT_ID"],
             client_secret=app.config["GOOGLE_CLIENT_SECRET"],
             server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-            client_kwargs={"scope": "openid email profile groups"},
+            client_kwargs={"scope": "openid email profile"},
         )
     if app.config["KEYCLOAK_CLIENT_ID"] and app.config["KEYCLOAK_SERVER_URL"]:
         oauth.register(
@@ -60,7 +60,7 @@ def create_app(config_class=Config):
             client_id=app.config["KEYCLOAK_CLIENT_ID"],
             client_secret=app.config["KEYCLOAK_CLIENT_SECRET"],
             server_metadata_url=f"{app.config['KEYCLOAK_SERVER_URL']}/.well-known/openid-configuration",
-            client_kwargs={"scope": "openid email profile groups"},
+            client_kwargs={"scope": "openid email profile"},
         )
     if app.config["AUTHENTIK_CLIENT_ID"] and app.config["AUTHENTIK_SERVER_URL"]:
         oauth.register(
@@ -68,7 +68,7 @@ def create_app(config_class=Config):
             client_id=app.config["AUTHENTIK_CLIENT_ID"],
             client_secret=app.config["AUTHENTIK_CLIENT_SECRET"],
             server_metadata_url=f"{app.config['AUTHENTIK_SERVER_URL']}/.well-known/openid-configuration",
-            client_kwargs={"scope": "openid email profile groups"},
+            client_kwargs={"scope": "openid email profile"},
         )
 
     # Make the config available to all templates.
