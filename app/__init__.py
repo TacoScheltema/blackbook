@@ -96,6 +96,7 @@ def create_app(config_class=Config):
     # --- Start Background Scheduler ---
     from app.jobs import refresh_ldap_cache
 
+    # Run the job once on startup to ensure cache is populated immediately
     with app.app_context():
         refresh_ldap_cache(app)
 
@@ -103,6 +104,7 @@ def create_app(config_class=Config):
         func=refresh_ldap_cache, args=[app], trigger="interval", seconds=app.config["CACHE_REFRESH_INTERVAL"]
     )
     scheduler.start()
+    # Ensure the scheduler is shut down when the app exits
     atexit.register(lambda: scheduler.shutdown())
 
     return app
