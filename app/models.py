@@ -18,11 +18,15 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(128))
+    # 'sso' or 'local' or 'ldap' to know the origin
     auth_source = db.Column(db.String(20), default="local")
+    # Flag to force password reset on first login
     password_reset_required = db.Column(db.Boolean, default=False)
+    # New column to store user's page size preference
     page_size = db.Column(db.Integer, default=20)
     is_admin = db.Column(db.Boolean, default=False)
 
+    # New fields for password reset tokens
     password_reset_token = db.Column(db.String(32), index=True, unique=True)
     password_reset_expiration = db.Column(db.DateTime)
 

@@ -200,7 +200,10 @@ def authorize(provider):
 
         if not user:
             user = User(
-                username=sso_user_id, email=user_info.get("email"), auth_source="sso", is_admin=is_admin
+                username=sso_user_id,
+                email=user_info.get("email"),
+                auth_source="sso",
+                is_admin=is_admin,
             )
             db.session.add(user)
         else:
