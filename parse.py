@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-import os
+#
+# Script to parse gemini output
+# It will read files and then split them up into individual files
+# and write them to the chosen directory
 import argparse
+import os
+
 
 def extract_files_from_data_file(data_file_path, target_dir):
-    with open(data_file_path, 'r', encoding='utf-8') as f:
+    with open(data_file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
     current_path = None
@@ -31,7 +36,7 @@ def extract_files_from_data_file(data_file_path, target_dir):
 
         # Normal content lines
         elif current_path:
-            if activate = 1:
+            if activate == 1:
                 if line.strip() == "":
                     buffer.append("\n")
                 else:
@@ -41,15 +46,17 @@ def extract_files_from_data_file(data_file_path, target_dir):
     if current_path and buffer:
         write_file(current_path, buffer, target_dir)
 
+
 def parse_filename(line):
     """Extracts filename from start marker line."""
     if line.startswith("# filename: .env"):
-        return line[len("# filename: ."):].strip()
+        return line[len("# filename: .") :].strip()
     if line.startswith("# filename:"):
-        return line[len("# filename:"):].strip()
+        return line[len("# filename:") :].strip()
     elif line.startswith("<!-- filename:"):
-        return line[len("<!-- filename:"):].replace("-->", "").strip()
+        return line[len("<!-- filename:") :].replace("-->", "").strip()
     return None
+
 
 def write_file(rel_path, content_lines, base_dir):
     full_path = os.path.join(base_dir, rel_path)
@@ -57,19 +64,20 @@ def write_file(rel_path, content_lines, base_dir):
     if dir_path:
         os.makedirs(dir_path, exist_ok=True)
 
-    with open(full_path, 'w', encoding='utf-8') as f:
+    with open(full_path, "w", encoding="utf-8") as f:
         f.writelines(content_lines)
 
     print(f"Wrote file: {full_path}")
 
+
 def main():
     parser = argparse.ArgumentParser(description="Extract and write code files from a data file.")
-    parser.add_argument('-f', '--file', required=True, help='Path to the input data file')
-    parser.add_argument('-d', '--directory', required=True, help='Target directory to write files to')
+    parser.add_argument("-f", "--file", required=True, help="Path to the input data file")
+    parser.add_argument("-d", "--directory", required=True, help="Target directory to write files to")
     args = parser.parse_args()
 
     extract_files_from_data_file(args.file, args.directory)
 
+
 if __name__ == "__main__":
     main()
-
