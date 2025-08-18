@@ -18,6 +18,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
+login_manager.login_message = None  # Disable the "Please log in" message
 oauth = OAuth()
 scheduler = BackgroundScheduler()
 mail = Mail()
@@ -80,11 +81,10 @@ def create_app(config_class=Config):
     app.jinja_env.filters["b64encode"] = b64encode_filter
 
     # Register blueprints
+    from app.auth import bp as auth_bp
     from app.main import bp as main_bp
 
     app.register_blueprint(main_bp)
-    from app.auth import bp as auth_bp
-
     app.register_blueprint(auth_bp)
 
     @app.before_request
@@ -101,7 +101,10 @@ def create_app(config_class=Config):
         refresh_ldap_cache(app)
 
     scheduler.add_job(
-        func=refresh_ldap_cache, args=[app], trigger="interval", seconds=app.config["CACHE_REFRESH_INTERVAL"]
+        func=refresh_ldap_cache,
+        args=[app],
+        trigger="interval",
+        seconds=app.config["CACHE_REFRESH_INTERVAL"],
     )
     scheduler.start()
     # Ensure the scheduler is shut down when the app exits
