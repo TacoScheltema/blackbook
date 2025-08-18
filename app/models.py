@@ -25,6 +25,7 @@ class User(UserMixin, db.Model):
     # New column to store user's page size preference
     page_size = db.Column(db.Integer, default=20)
     is_admin = db.Column(db.Boolean, default=False)
+    is_editor = db.Column(db.Boolean, default=False)
 
     # New fields for password reset tokens
     password_reset_token = db.Column(db.String(32), index=True, unique=True)
