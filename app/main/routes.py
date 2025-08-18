@@ -454,3 +454,19 @@ def force_reset_password(user_id):
     db.session.commit()  # The token is saved in the send_password_reset_email function
     flash(f"A password reset link has been sent to {user.email}.", "info")
     return redirect(url_for("main.admin_users"))
+
+
+@bp.route("/admin/set_roles/<int:user_id>", methods=["POST"])
+@login_required
+@admin_required
+def set_roles(user_id):
+    if user_id == 1:
+        flash("Cannot change roles for the primary admin user.", "danger")
+        return redirect(url_for("main.admin_users"))
+
+    user = User.query.get_or_404(user_id)
+    user.is_admin = "is_admin" in request.form
+    user.is_editor = "is_editor" in request.form
+    db.session.commit()
+    flash(f"Roles updated for {user.username}.", "success")
+    return redirect(url_for("main.admin_users"))
