@@ -8,6 +8,7 @@ def extract_files_from_data_file(data_file_path, target_dir):
 
     current_path = None
     buffer = []
+    activate = 0
 
     for line in lines:
         # Detect start marker
@@ -17,6 +18,7 @@ def extract_files_from_data_file(data_file_path, target_dir):
                 buffer = []
 
             current_path = parse_filename(line)
+            activate = 1
 
         # Detect end marker
         elif line.strip() == "# end file" or line.strip() == "<!-- end file -->":
@@ -24,14 +26,16 @@ def extract_files_from_data_file(data_file_path, target_dir):
                 write_file(current_path, buffer, target_dir)
             current_path = None
             buffer = []
+            activate = 0
             continue  # Do not include end marker
 
         # Normal content lines
         elif current_path:
-            if line.strip() == "":
-                buffer.append("\n")
-            else:
-                buffer.append(line)
+            if activate = 1:
+                if line.strip() == "":
+                    buffer.append("\n")
+                else:
+                    buffer.append(line)
 
     # Write last file if not closed
     if current_path and buffer:
@@ -39,7 +43,7 @@ def extract_files_from_data_file(data_file_path, target_dir):
 
 def parse_filename(line):
     """Extracts filename from start marker line."""
-    if line.startswith("# filename: ."):
+    if line.startswith("# filename: .env"):
         return line[len("# filename: ."):].strip()
     if line.startswith("# filename:"):
         return line[len("# filename:"):].strip()
