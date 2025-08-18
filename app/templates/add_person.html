@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+        <h1 class="my-2">{{ title }}</h1>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('main.add_person') }}" method="post">
+            <div class="row">
+                {# Loop through the configured attribute map to dynamically create the form. #}
+                {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
+                <div class="col-md-6 mb-3">
+                    <label for="{{ attr_name }}" class="form-label" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ attr_name }}">
+                        {{ display_name }}
+                    </label>
+
+                    {% set input_type = 'text' %}
+                    {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
+                    {% if attr_name == 'telephoneNumber' %}{% set input_type = 'tel' %}{% endif %}
+                    <input type="{{ input_type }}" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}">
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary">Add Contact</button>
+            <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

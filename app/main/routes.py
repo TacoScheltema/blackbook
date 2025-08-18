@@ -31,6 +31,20 @@ def admin_required(f):
     return decorated_function
 
 
+def editor_required(f):
+    """Decorator to restrict access to admin or editor users."""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_app.config["READONLY"]:
+            abort(403)
+        if not current_user.is_authenticated or not (current_user.is_admin or current_user.is_editor):
+            abort(403)
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 @bp.route("/")
 @login_required
 def index():
@@ -267,8 +281,23 @@ END:VCARD"""
     )
 
 
+@bp.route("/person/add", methods=["GET", "POST"])
+@login_required
+@editor_required
+def add_person():
+    """Handles creation of a new person entry."""
+    if request.method == "POST":
+        # Logic to add a new person will go here
+        flash("Contact added successfully!", "success")
+        cache.clear()
+        return redirect(url_for("main.index"))
+
+    return render_template("add_person.html", title="Add New Contact")
+
+
 @bp.route("/person/edit/<b64_dn>", methods=["GET", "POST"])
 @login_required
+@editor_required
 def edit_person(b64_dn):
     """Handles editing of a person entry."""
     try:
