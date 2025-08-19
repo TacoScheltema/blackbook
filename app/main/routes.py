@@ -31,6 +31,20 @@ def admin_required(f):
     return decorated_function
 
 
+def editor_required(f):
+    """Decorator to restrict access to admin or editor users."""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_app.config["READONLY"]:
+            abort(403)
+        if not current_user.is_authenticated or not (current_user.is_admin or current_user.is_editor):
+            abort(403)
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 @bp.route("/")
 @login_required
 def index():
@@ -267,8 +281,23 @@ END:VCARD"""
     )
 
 
+@bp.route("/person/add", methods=["GET", "POST"])
+@login_required
+@editor_required
+def add_person():
+    """Handles creation of a new person entry."""
+    if request.method == "POST":
+        # Logic to add a new person will go here
+        flash("Contact added successfully!", "success")
+        cache.clear()
+        return redirect(url_for("main.index"))
+
+    return render_template("add_person.html", title="Add New Contact")
+
+
 @bp.route("/person/edit/<b64_dn>", methods=["GET", "POST"])
 @login_required
+@editor_required
 def edit_person(b64_dn):
     """Handles editing of a person entry."""
     try:
@@ -299,7 +328,6 @@ def edit_person(b64_dn):
             flash("No changes were submitted.", "info")
         elif modify_ldap_entry(dn, changes):
             flash("Person details updated successfully!", "success")
-            cache.clear()  # Clear the cache after a successful modification
 
         return redirect(url_for("main.person_detail", b64_dn=b64_dn))
 
@@ -424,4 +452,20 @@ def force_reset_password(user_id):
     send_password_reset_email(user)
     db.session.commit()  # The token is saved in the send_password_reset_email function
     flash(f"A password reset link has been sent to {user.email}.", "info")
+    return redirect(url_for("main.admin_users"))
+
+
+@bp.route("/admin/set_roles/<int:user_id>", methods=["POST"])
+@login_required
+@admin_required
+def set_roles(user_id):
+    if user_id == 1:
+        flash("Cannot change roles for the primary admin user.", "danger")
+        return redirect(url_for("main.admin_users"))
+
+    user = User.query.get_or_404(user_id)
+    user.is_admin = "is_admin" in request.form
+    user.is_editor = "is_editor" in request.form
+    db.session.commit()
+    flash(f"Roles updated for {user.username}.", "success")
     return redirect(url_for("main.admin_users"))

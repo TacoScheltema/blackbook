@@ -42,32 +42,40 @@ def get_ldap_connection(user_dn=None, password=None, read_only=False):
 def authenticate_ldap_user(username, password):
     """
     Attempts to bind to the LDAP server with a given username and password.
-    Returns a tuple of (is_authenticated, is_admin).
+    Returns a tuple of (is_authenticated, is_admin, is_editor).
     """
     user_dn_template = current_app.config.get("LDAP_USER_DN_TEMPLATE")
     admin_group_dn = current_app.config.get("LDAP_ADMIN_GROUP_DN")
+    editor_group_dn = current_app.config.get("LDAP_EDITOR_GROUP_DN")
 
     if not user_dn_template:
         flash("LDAP user DN template is not configured.", "danger")
-        return False, False
+        return False, False, False
 
     user_dn = user_dn_template.format(username=username)
 
     conn = get_ldap_connection(user_dn=user_dn, password=password)
     if not conn:
-        return False, False
+        return False, False, False
 
     is_admin = False
     if admin_group_dn:
         try:
-            # Check if the user is a member of the admin group
             is_admin = conn.search(admin_group_dn, f"(member={user_dn})", attributes=["cn"])
         except LDAPException as e:
             print(f"Could not check admin group membership: {e}")
             is_admin = False
 
+    is_editor = False
+    if editor_group_dn:
+        try:
+            is_editor = conn.search(editor_group_dn, f"(member={user_dn})", attributes=["cn"])
+        except LDAPException as e:
+            print(f"Could not check editor group membership: {e}")
+            is_editor = False
+
     conn.unbind()
-    return True, is_admin
+    return True, is_admin, is_editor
 
 
 def add_ldap_user(username, password, email, given_name, surname):

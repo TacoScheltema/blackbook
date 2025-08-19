@@ -32,8 +32,10 @@
                     </a>
                     {% endif %}
 
+                    {% block navbar_buttons %}{% endblock %}
+
                     <!-- Spacer -->
-                    <div class="me-2"></div>
+                    <div class="me-auto"></div>
 
                     <!-- Admin Button -->
                     {% if current_user.is_admin %}

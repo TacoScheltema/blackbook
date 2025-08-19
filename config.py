@@ -17,6 +17,7 @@ class Config:
 
     SECRET_KEY = os.environ.get("SECRET_KEY") or "a-very-secret-key-that-you-should-change"
     FLASK_DEBUG = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
+    READONLY = os.environ.get("READONLY", "False").lower() in ("true", "1", "t")
 
     # --- Authentication Method Toggles ---
     ENABLE_LOCAL_LOGIN = os.environ.get("ENABLE_LOCAL_LOGIN", "True").lower() in ("true", "1", "t")
@@ -50,6 +51,7 @@ class Config:
     LDAP_USE_SSL = os.environ.get("LDAP_USE_SSL", "False").lower() in ("true", "1", "t")
     LDAP_USER_DN_TEMPLATE = os.environ.get("LDAP_USER_DN_TEMPLATE")
     LDAP_ADMIN_GROUP_DN = os.environ.get("LDAP_ADMIN_GROUP_DN")
+    LDAP_EDITOR_GROUP_DN = os.environ.get("LDAP_EDITOR_GROUP_DN")
 
     # --- Contact Filter ---
     LDAP_CONTACTS_DN = os.environ.get("ADDRESSBOOK_FILTER") or LDAP_BASE_DN
@@ -58,16 +60,19 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
     GOOGLE_ADMIN_GROUP = os.environ.get("GOOGLE_ADMIN_GROUP")
+    GOOGLE_EDITOR_GROUP = os.environ.get("GOOGLE_EDITOR_GROUP")
 
     KEYCLOAK_CLIENT_ID = os.environ.get("KEYCLOAK_CLIENT_ID")
     KEYCLOAK_CLIENT_SECRET = os.environ.get("KEYCLOAK_CLIENT_SECRET")
     KEYCLOAK_SERVER_URL = os.environ.get("KEYCLOAK_SERVER_URL")
     KEYCLOAK_ADMIN_GROUP = os.environ.get("KEYCLOAK_ADMIN_GROUP")
+    KEYCLOAK_EDITOR_GROUP = os.environ.get("KEYCLOAK_EDITOR_GROUP")
 
     AUTHENTIK_CLIENT_ID = os.environ.get("AUTHENTIK_CLIENT_ID")
     AUTHENTIK_CLIENT_SECRET = os.environ.get("AUTHENTIK_CLIENT_SECRET")
     AUTHENTIK_SERVER_URL = os.environ.get("AUTHENTIK_SERVER_URL")
     AUTHENTIK_ADMIN_GROUP = os.environ.get("AUTHENTIK_ADMIN_GROUP")
+    AUTHENTIK_EDITOR_GROUP = os.environ.get("AUTHENTIK_EDITOR_GROUP")
 
     # --- ObjectClass Configuration ---
     LDAP_PERSON_OBJECT_CLASS = os.environ.get("LDAP_PERSON_OBJECT_CLASS", "inetOrgPerson")

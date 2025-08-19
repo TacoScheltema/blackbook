@@ -15,6 +15,7 @@
                         <tr>
                             <th>Username</th>
                             <th>Email</th>
+                            <th>Roles</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -23,6 +24,19 @@
                         <tr>
                             <td>{{ user.username }} {% if user.password_reset_required %}<span class="badge bg-warning text-dark">Reset Required</span>{% endif %}</td>
                             <td>{{ user.email or 'N/A' }}</td>
+                            <td>
+                                <form action="{{ url_for('main.set_roles', user_id=user.id) }}" method="post">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" name="is_admin" id="isAdmin{{ user.id }}" {% if user.is_admin %}checked{% endif %} {% if user.id == 1 %}disabled{% endif %}>
+                                        <label class="form-check-label" for="isAdmin{{ user.id }}">Admin</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" name="is_editor" id="isEditor{{ user.id }}" {% if user.is_editor %}checked{% endif %} {% if user.id == 1 %}disabled{% endif %}>
+                                        <label class="form-check-label" for="isEditor{{ user.id }}">Editor</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary btn-sm" {% if user.id == 1 %}disabled{% endif %}>Save Roles</button>
+                                </form>
+                            </td>
                             <td>
                                 {% if user.password_reset_token and user.password_reset_expiration > current_time %}
                                     <span class="badge bg-info text-dark countdown" data-expires="{{ user.password_reset_expiration.isoformat() }}Z">Link sent</span>
@@ -180,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 el.classList.remove('bg-info');
                 el.classList.add('bg-secondary');
                 // Optionally, refresh the page to show the "Force Reset" button again
-                // window.location.reload(); 
+                // window.location.reload();
                 return;
             }
 
