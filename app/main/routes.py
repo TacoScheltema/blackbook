@@ -328,7 +328,6 @@ def edit_person(b64_dn):
             flash("No changes were submitted.", "info")
         elif modify_ldap_entry(dn, changes):
             flash("Person details updated successfully!", "success")
-            cache.clear()  # Clear the cache after a successful modification
 
         return redirect(url_for("main.person_detail", b64_dn=b64_dn))
 
