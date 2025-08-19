@@ -13,8 +13,6 @@
             <a class="navbar-brand" href="{{ url_for('main.index') }}">LDAP Address Book</a>
             <div class="ms-auto d-flex align-items-center">
                 {% if current_user.is_authenticated %}
-                    {% block navbar_buttons %}{% endblock %}
-
                     <!-- Address Book Button (people icon) -->
                     <a href="{{ url_for('main.index') }}" class="btn {% if request.endpoint in ['main.index', 'main.person_detail'] %}btn-light{% else %}btn-outline-light{% endif %} me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Address Book">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
@@ -38,6 +36,8 @@
                         </svg>
                     </a>
                     {% endif %}
+
+                    {% block navbar_buttons %}{% endblock %}
 
                     <!-- Spacer -->
                     <div class="me-auto"></div>
