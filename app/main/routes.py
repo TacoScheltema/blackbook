@@ -289,7 +289,6 @@ def add_person():
     if request.method == "POST":
         # Logic to add a new person will go here
         flash("Contact added successfully!", "success")
-        cache.clear()
         return redirect(url_for("main.index"))
 
     return render_template("add_person.html", title="Add New Contact")
