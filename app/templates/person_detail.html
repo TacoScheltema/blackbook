@@ -80,7 +80,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 function generateVCardQR() {
-    const person = {{ person|tojson }};
+    const person = {{ person|tojson|safe }};
 
     let vCard = `BEGIN:VCARD
 VERSION:3.0
