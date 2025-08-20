@@ -15,13 +15,15 @@
                         {{ display_name }}
                     </label>
 
-                    {% if attr_name == 'o' %}
-                        <input class="form-control" list="company-options" id="o" name="o" value="{{ (person.o[0] if person.o else '') }}">
-                        <datalist id="company-options">
-                            {% for company in companies %}
-                                <option value="{{ company.o[0] if company.o else '' }}">
+                    {% if attr_name == 'manager' %}
+                        <select class="form-select" id="manager" name="manager">
+                            <option value="">None</option>
+                            {% for manager in potential_managers %}
+                                <option value="{{ manager.dn }}" {% if person.manager and person.manager[0] == manager.dn %}selected{% endif %}>
+                                    {{ manager.cn[0] }}
+                                </option>
                             {% endfor %}
-                        </datalist>
+                        </select>
                     {% else %}
                         {% set input_type = 'text' %}
                         {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}

@@ -15,10 +15,23 @@
                         {{ display_name }}
                     </label>
 
-                    {% set input_type = 'text' %}
-                    {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
-                    {% if attr_name == 'telephoneNumber' %}{% set input_type = 'tel' %}{% endif %}
-                    <input type="{{ input_type }}" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}">
+                    {% if attr_name == 'manager' %}
+                        <select class="form-select" id="manager" name="manager" disabled>
+                            <option selected>Select a company first</option>
+                        </select>
+                    {% elif attr_name == 'o' %}
+                        <input class="form-control" list="company-options" id="company" name="o" onchange="updateManagerOptions()">
+                        <datalist id="company-options">
+                            {% for company in company_employees.keys()|sort %}
+                                <option value="{{ company }}">
+                            {% endfor %}
+                        </datalist>
+                    {% else %}
+                        {% set input_type = 'text' %}
+                        {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
+                        {% if attr_name == 'telephoneNumber' %}{% set input_type = 'tel' %}{% endif %}
+                        <input type="{{ input_type }}" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}">
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -27,4 +40,30 @@
         </form>
     </div>
 </div>
+
+<script>
+const companyEmployees = {{ company_employees|tojson|safe }};
+
+function updateManagerOptions() {
+    const companyInput = document.getElementById('company');
+    const managerSelect = document.getElementById('manager');
+    const selectedCompany = companyInput.value;
+
+    // Clear current options
+    managerSelect.innerHTML = '<option value="">None</option>';
+
+    if (selectedCompany && companyEmployees[selectedCompany]) {
+        managerSelect.disabled = false;
+        companyEmployees[selectedCompany].forEach(employee => {
+            const option = document.createElement('option');
+            option.value = employee.dn;
+            option.textContent = employee.cn;
+            managerSelect.appendChild(option);
+        });
+    } else {
+        managerSelect.disabled = true;
+        managerSelect.innerHTML = '<option selected>Select a company first</option>';
+    }
+}
+</script>
 {% endblock %}
