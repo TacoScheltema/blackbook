@@ -286,12 +286,25 @@ END:VCARD"""
 @editor_required
 def add_person():
     """Handles creation of a new person entry."""
+    all_people = cache.get("all_people") or []
+    company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
+
+    # Create a map of companies to their employees for the manager dropdown
+    company_employees = {}
+    for person in all_people:
+        company = (person.get(company_link_attr) or [None])[0]
+        if company:
+            if company not in company_employees:
+                company_employees[company] = []
+            company_employees[company].append({"cn": person["cn"][0], "dn": person["dn"]})
+
     if request.method == "POST":
         # Logic to add a new person will go here
         flash("Contact added successfully!", "success")
+        cache.clear()
         return redirect(url_for("main.index"))
 
-    return render_template("add_person.html", title="Add New Contact")
+    return render_template("add_person.html", title="Add New Contact", company_employees=company_employees)
 
 
 @bp.route("/person/edit/<b64_dn>", methods=["GET", "POST"])
@@ -308,6 +321,18 @@ def edit_person(b64_dn):
     current_person = get_entry_by_dn(dn, person_attrs)
     if not current_person:
         abort(404)
+
+    # Get potential managers (colleagues in the same company)
+    potential_managers = []
+    company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
+    person_company = (current_person.get(company_link_attr) or [None])[0]
+    if person_company:
+        all_people = cache.get("all_people") or []
+        potential_managers = [
+            p
+            for p in all_people
+            if p.get(company_link_attr) and p[company_link_attr][0] == person_company and p["dn"] != dn
+        ]
 
     if request.method == "POST":
         changes = {}
@@ -336,6 +361,7 @@ def edit_person(b64_dn):
         title=f"Edit {person_name}",
         person=current_person,
         b64_dn=b64_dn,
+        potential_managers=potential_managers,
     )
 
 
