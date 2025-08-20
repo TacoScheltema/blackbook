@@ -9,7 +9,7 @@ from flask_login import current_user, login_required
 
 from app import cache, db, scheduler
 from app.email import send_password_reset_email
-from app.ldap_utils import add_ldap_user, delete_ldap_user, get_entry_by_dn, modify_ldap_entry
+from app.ldap_utils import add_ldap_entry, add_ldap_user, delete_ldap_user, get_entry_by_dn, modify_ldap_entry
 from app.main import bp
 from app.models import User
 
@@ -299,9 +299,31 @@ def add_person():
             company_employees[company].append({"cn": person["cn"][0], "dn": person["dn"]})
 
     if request.method == "POST":
-        # Logic to add a new person will go here
-        flash("Contact added successfully!", "success")
-        return redirect(url_for("main.index"))
+        attributes = {
+            attr: request.form.get(attr)
+            for attr in get_config("LDAP_PERSON_ATTRIBUTES")
+            if request.form.get(attr)
+        }
+
+        if not attributes.get("cn"):
+            flash("Full Name (cn) is a required field.", "danger")
+            return redirect(url_for("main.add_person"))
+
+        dn_template = get_config("LDAP_CONTACT_DN_TEMPLATE")
+        if not dn_template:
+            flash("LDAP contact DN template is not configured.", "danger")
+            return redirect(url_for("main.add_person"))
+
+        new_dn = dn_template.format(cn=attributes["cn"])
+        object_classes = get_config("LDAP_PERSON_OBJECT_CLASS").split(",")
+
+        if add_ldap_entry(new_dn, object_classes, attributes):
+            flash("Contact added successfully!", "success")
+            cache.clear()
+            return redirect(url_for("main.index"))
+        else:
+            # The add_ldap_entry function will flash the specific LDAP error
+            return redirect(url_for("main.add_person"))
 
     return render_template("add_person.html", title="Add New Contact", company_employees=company_employees)
 
