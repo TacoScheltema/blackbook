@@ -319,7 +319,6 @@ def add_person():
 
         if add_ldap_entry(new_dn, object_classes, attributes):
             flash("Contact added successfully!", "success")
-            cache.clear()
             return redirect(url_for("main.index"))
         else:
             # The add_ldap_entry function will flash the specific LDAP error
