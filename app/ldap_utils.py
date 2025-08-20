@@ -96,6 +96,7 @@ def add_ldap_user(username, password, email, given_name, surname):
         "sn": surname,
         "givenName": given_name,
         "mail": email,
+        "uid": username,
         "userPassword": hashed_password,
     }
 
