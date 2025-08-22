@@ -225,6 +225,13 @@ def person_detail(b64_dn):
 
     person_name = person.get("cn", ["Unknown"])[0]
 
+    manager_name = None
+    if "manager" in person and person["manager"]:
+        manager_dn = person["manager"][0]
+        manager = get_entry_by_dn(manager_dn, ["cn"])
+        if manager:
+            manager_name = manager.get("cn", [None])[0]
+
     # Capture all relevant query params to pass them back for the "back" button
     back_params = {
         "page": request.args.get("page"),
@@ -241,6 +248,7 @@ def person_detail(b64_dn):
         person=person,
         b64_dn=b64_dn,
         back_params=back_params,
+        manager_name=manager_name,
     )
 
 
