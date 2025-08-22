@@ -52,6 +52,7 @@ class Config:
     LDAP_USER_DN_TEMPLATE = os.environ.get("LDAP_USER_DN_TEMPLATE")
     LDAP_ADMIN_GROUP_DN = os.environ.get("LDAP_ADMIN_GROUP_DN")
     LDAP_EDITOR_GROUP_DN = os.environ.get("LDAP_EDITOR_GROUP_DN")
+    LDAP_CONTACT_DN_TEMPLATE = os.environ.get("LDAP_CONTACT_DN_TEMPLATE")
 
     # --- Contact Filter ---
     LDAP_CONTACTS_DN = os.environ.get("ADDRESSBOOK_FILTER") or LDAP_BASE_DN
