@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
 {% block navbar_buttons %}
-<a href="{{ url_for('main.all_companies') }}" class="btn btn-outline-light" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Back to Companies">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-building" viewBox="0 0 16 16">
-      <path d="M4 2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1ZM4 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM7.5 5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM4.5 8a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Z"/>
-      <path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V1Zm11 0H3v14h3v-2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V15h3V1Z"/>
-    </svg>
-</a>
+	<a href="{{ url_for('main.all_companies') }}" class="btn btn-outline-light" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Back to Companies">
+	    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-building" viewBox="0 0 16 16">
+	      <path d="M4 2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1ZM4 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM7.5 5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM4.5 8a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Z"/>
+	      <path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V1Zm11 0H3v14h3v-2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V15h3V1Z"/>
+	    </svg>
+	</a>
 {% endblock %}
 
 {% block content %}
@@ -15,19 +15,62 @@
         <h1 class="my-2">{{ company_name }}</h1>
     </div>
     <div class="card-body">
-        <h5 class="card-title">Employees</h5>
-        <div class="list-group shadow-sm">
-            {% if employees %}
-                {% for employee in employees %}
-                <a href="{{ url_for('main.person_detail', b64_dn=employee.dn|b64encode) }}" class="list-group-item list-group-item-action">
-                    <strong>{{ employee.cn[0] if employee.cn else 'Unnamed Person' }}</strong><br>
-                    <small class="text-muted">{{ (employee.mail[0] if employee.mail else 'No email') }} | {{ (employee.telephoneNumber[0] if employee.telephoneNumber else 'No phone') }}</small>
-                </a>
-                {% endfor %}
-            {% else %}
-                <div class="list-group-item">No employees found for this company.</div>
-            {% endif %}
-        </div>
+        <h5 class="card-title">Organization Chart</h5>
+        <div id="orgchart" style="width:100%; height:700px;"></div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/orgchart.js@2.1.8/dist/js/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/orgchart.js@2.1.8/dist/js/jquery.orgchart.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/orgchart.js@2.1.8/dist/css/jquery.orgchart.min.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const employees = {{ employees|tojson|safe }};
+    if (employees.length === 0) {
+        document.getElementById('orgchart').innerHTML = '<p class="text-center text-muted">No employees found for this company.</p>';
+        return;
+    }
+
+    const nodes = employees.map(e => {
+        const managerDn = (e.manager && e.manager[0]) ? e.manager[0] : '';
+        const manager = employees.find(m => m.dn === managerDn);
+        return {
+            'id': e.dn,
+            'name': (e.cn && e.cn[0]) ? e.cn[0] : 'Unknown',
+            'title': (e.title && e.title[0]) ? e.title[0] : 'No Title',
+            'pid': manager ? manager.dn : ''
+        };
+    });
+
+    // Find the root nodes (people who don't have a manager within this company)
+    const rootNodes = nodes.filter(node => !node.pid);
+
+    // If there are multiple root nodes, create a virtual root for them
+    if (rootNodes.length > 1) {
+        const virtualRoot = { 'id': 'virtual-root', 'name': '{{ company_name }}', 'title': 'Organization', 'pid': '' };
+        nodes.push(virtualRoot);
+        rootNodes.forEach(node => {
+            node.pid = 'virtual-root';
+        });
+    }
+
+    $('#orgchart').orgchart({
+        'data': nodes,
+        'nodeContent': 'title',
+        'pan': true,
+        'zoom': true,
+        'createNode': function($node, data) {
+            $node.on('click', function() {
+                // Find the original employee object to get the b64 encoded DN
+                const employee = employees.find(e => e.dn === data.id);
+                if (employee) {
+                    const b64_dn = btoa(employee.dn).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                    window.location.href = `/person/${b64_dn}`;
+                }
+            });
+        }
+    });
+});
+</script>
 {% endblock %}
