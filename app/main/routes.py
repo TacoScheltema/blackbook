@@ -335,8 +335,13 @@ def add_person():
         object_classes = get_config("LDAP_PERSON_OBJECT_CLASS").split(",")
 
         if add_ldap_entry(new_dn, object_classes, attributes):
-            flash("Contact added successfully!", "success")
-            refresh_ldap_cache(current_app._get_current_object())
+            flash("Contact added successfully! The list will refresh shortly.", "success")
+            scheduler.add_job(
+                func=refresh_ldap_cache,
+                args=[current_app._get_current_object()],
+                id="manual_refresh_add",
+                replace_existing=True,
+            )
             return redirect(url_for("main.index"))
         else:
             # The add_ldap_entry function will flash the specific LDAP error
@@ -389,8 +394,13 @@ def edit_person(b64_dn):
         if not changes:
             flash("No changes were submitted.", "info")
         elif modify_ldap_entry(dn, changes):
-            flash("Person details updated successfully!", "success")
-            refresh_ldap_cache(current_app._get_current_object())
+            flash("Person details updated successfully! The list will refresh shortly.", "success")
+            scheduler.add_job(
+                func=refresh_ldap_cache,
+                args=[current_app._get_current_object()],
+                id="manual_refresh_edit",
+                replace_existing=True,
+            )
 
         return redirect(url_for("main.person_detail", b64_dn=b64_dn))
 
