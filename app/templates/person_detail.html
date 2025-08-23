@@ -47,6 +47,8 @@
                                 <a href="mailto:{{ values[0] }}">{{ values[0] }}</a>
                             {% elif attr_name == 'telephoneNumber' and values[0] %}
                                 <a href="callto:{{ values[0] }}">{{ values[0] }}</a>
+                            {% elif attr_name == config.LDAP_COMPANY_LINK_ATTRIBUTE and values[0] %}
+                                <a href="{{ url_for('main.company_detail', b64_company_name=values[0]|b64encode) }}">{{ values[0] }}</a>
                             {% else %}
                                 {{ values | join(', ') }}
                             {% endif %}
