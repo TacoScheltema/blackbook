@@ -218,6 +218,28 @@ def company_detail(b64_company_name):
     )
 
 
+@bp.route("/company/orgchart/<b64_company_name>")
+@login_required
+def company_orgchart(b64_company_name):
+    """Displays an org chart for a specific company."""
+    try:
+        company_name = b64decode_with_padding(b64_company_name)
+    except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    all_people = cache.get("all_people") or []
+    company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
+
+    employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
+
+    return render_template(
+        "company_orgchart.html",
+        title=f"Org Chart: {company_name}",
+        company_name=company_name,
+        employees=employees,
+    )
+
+
 @bp.route("/person/<b64_dn>")
 @login_required
 def person_detail(b64_dn):
