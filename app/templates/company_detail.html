@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
 {% block head_scripts %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/orgchart@5.0.0/dist/css/jquery.orgchart.min.css">
 {% endblock %}
 
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/orgchart@5.0.0/dist/js/jquery.orgchart.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/orgchart@5.0.0/dist/css/jquery.orgchart.min.css">
 <div class="card shadow-sm">
     <div class="card-header bg-dark text-white">
         <h1 class="my-2">{{ company_name }}</h1>
