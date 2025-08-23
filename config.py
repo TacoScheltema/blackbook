@@ -18,6 +18,7 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "a-very-secret-key-that-you-should-change"
     FLASK_DEBUG = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
     READONLY = os.environ.get("READONLY", "False").lower() in ("true", "1", "t")
+    APP_TITLE = os.environ.get("APP_TITLE") or "LDAP Address Book"
 
     # --- Authentication Method Toggles ---
     ENABLE_LOCAL_LOGIN = os.environ.get("ENABLE_LOCAL_LOGIN", "True").lower() in ("true", "1", "t")
