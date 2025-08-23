@@ -45,6 +45,14 @@ def editor_required(f):
     return decorated_function
 
 
+def b64decode_with_padding(s):
+    """Helper to decode a URL-safe base64 string, adding padding if necessary."""
+    missing_padding = len(s) % 4
+    if missing_padding:
+        s += "=" * (4 - missing_padding)
+    return base64.urlsafe_b64decode(s).decode("utf-8")
+
+
 @bp.route("/")
 @login_required
 def index():
@@ -192,7 +200,7 @@ def all_companies():
 def company_detail(b64_company_name):
     """Displays a list of people belonging to a specific company."""
     try:
-        company_name = base64.urlsafe_b64decode(b64_company_name).decode("utf-8")
+        company_name = b64decode_with_padding(b64_company_name)
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
@@ -214,7 +222,7 @@ def company_detail(b64_company_name):
 def person_detail(b64_dn):
     """Displays details for a single person."""
     try:
-        dn = base64.urlsafe_b64decode(b64_dn).decode("utf-8")
+        dn = b64decode_with_padding(b64_dn)
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
@@ -257,7 +265,7 @@ def person_detail(b64_dn):
 def person_vcard(b64_dn):
     """Generates and returns a vCard file for a person."""
     try:
-        dn = base64.urlsafe_b64decode(b64_dn).decode("utf-8")
+        dn = b64decode_with_padding(b64_dn)
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
@@ -341,7 +349,7 @@ def add_person():
 def edit_person(b64_dn):
     """Handles editing of a person entry."""
     try:
-        dn = base64.urlsafe_b64decode(b64_dn).decode("utf-8")
+        dn = b64decode_with_padding(b64_dn)
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
