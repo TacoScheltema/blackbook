@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/orgchart@5.0.0/dist/js/jquery.orgchart.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/orgchart@5.0.0/dist/css/jquery.orgchart.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+        <h1 class="my-2">{{ company_name }}</h1>
+    </div>
+    <div class="card-body">
+        <h5 class="card-title">Organization Chart</h5>
+        <div id="orgchart" style="width:100%; height:700px;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block body_scripts %}
+<script>
+$(function() {
+    const employees = {{ employees|tojson|safe }};
+    if (employees.length === 0) {
+        $('#orgchart').html('<p class="text-center text-muted">No employees found for this company.</p>');
+        return;
+    }
+
+    const nodeMap = {};
+    employees.forEach(e => {
+        nodeMap[e.dn] = {
+            'id': e.dn,
+            'name': (e.cn && e.cn[0]) ? e.cn[0] : 'Unknown',
+            'title': (e.title && e.title[0]) ? e.title[0] : 'No Title',
+            'children': []
+        };
+    });
+
+    const roots = [];
+    Object.values(nodeMap).forEach(node => {
+        const employee = employees.find(e => e.dn === node.id);
+        const managerDn = (employee.manager && employee.manager[0]) ? employee.manager[0] : null;
+
+        if (managerDn && nodeMap[managerDn]) {
+            nodeMap[managerDn].children.push(node);
+        } else {
+            roots.push(node);
+        }
+    });
+
+    let datasource;
+    if (roots.length === 1) {
+        datasource = roots[0];
+    } else {
+        datasource = {
+            'id': 'virtual-root',
+            'name': '{{ company_name }}',
+            'title': 'Organization',
+            'children': roots
+        };
+    }
+
+    $('#orgchart').orgchart({
+        'data': datasource,
+        'nodeContent': 'title',
+        'pan': true,
+        'zoom': true,
+        'createNode': function($node, data) {
+            if (data.id !== 'virtual-root') {
+                $node.on('click', function() {
+                    const b64_dn = btoa(data.id).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                    window.location.href = `/person/${b64_dn}`;
+                });
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
