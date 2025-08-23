@@ -9,6 +9,7 @@ from flask_login import current_user, login_required
 
 from app import cache, db, scheduler
 from app.email import send_password_reset_email
+from app.jobs import refresh_ldap_cache
 from app.ldap_utils import add_ldap_entry, add_ldap_user, delete_ldap_user, get_entry_by_dn, modify_ldap_entry
 from app.main import bp
 from app.models import User
@@ -327,6 +328,7 @@ def add_person():
 
         if add_ldap_entry(new_dn, object_classes, attributes):
             flash("Contact added successfully!", "success")
+            refresh_ldap_cache(current_app._get_current_object())
             return redirect(url_for("main.index"))
         else:
             # The add_ldap_entry function will flash the specific LDAP error
@@ -380,6 +382,7 @@ def edit_person(b64_dn):
             flash("No changes were submitted.", "info")
         elif modify_ldap_entry(dn, changes):
             flash("Person details updated successfully!", "success")
+            refresh_ldap_cache(current_app._get_current_object())
 
         return redirect(url_for("main.person_detail", b64_dn=b64_dn))
 
