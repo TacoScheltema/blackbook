@@ -40,3 +40,15 @@ body {
     font-size: 0.8em;
     margin-left: 4px;
 }
+
+/* New styles for the person detail page */
+.card-body a,
+.card-body a:visited {
+    color: navy;
+    text-decoration: none;
+}
+
+.card-body a:hover {
+    color: navy;
+    text-decoration: none;
+}
