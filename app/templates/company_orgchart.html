@@ -1,15 +1,18 @@
 {% extends "base.html" %}
 
 {% block head_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/orgchart@5.0.0/dist/js/jquery.orgchart.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/orgchart@5.0.0/dist/css/jquery.orgchart.min.css">
 {% endblock %}
 
 {% block content %}
 <div class="card shadow-sm">
-    <div class="card-header bg-dark text-white">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h1 class="my-2">{{ company_name }}</h1>
+        <a href="{{ url_for('main.company_detail', b64_company_name=company_name|b64encode) }}" class="btn btn-outline-light" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Back to List View">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-ul" viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+            </svg>
+        </a>
     </div>
     <div class="card-body">
         <h5 class="card-title">Organization Chart</h5>
@@ -19,6 +22,8 @@
 {% endblock %}
 
 {% block body_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/orgchart@5.0.0/dist/js/jquery.orgchart.min.js"></script>
 <script>
 $(function() {
     const employees = {{ employees|tojson|safe }};
