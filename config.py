@@ -1,3 +1,17 @@
+# This file is part of Blackbook.
+#
+# Blackbook is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Blackbook is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 import os
 from collections import OrderedDict
 
@@ -18,6 +32,7 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "a-very-secret-key-that-you-should-change"
     FLASK_DEBUG = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
     READONLY = os.environ.get("READONLY", "False").lower() in ("true", "1", "t")
+    APP_TITLE = os.environ.get("APP_TITLE") or "LDAP Address Book"
 
     # --- Authentication Method Toggles ---
     ENABLE_LOCAL_LOGIN = os.environ.get("ENABLE_LOCAL_LOGIN", "True").lower() in ("true", "1", "t")
