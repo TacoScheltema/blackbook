@@ -25,6 +25,33 @@ from app.ldap_utils import authenticate_ldap_user, set_ldap_password
 from app.models import User
 
 
+def _handle_local_login(username, password):
+    """Handles the logic for a local user login."""
+    user = User.query.filter_by(username=username).first()
+    if user is None or not user.check_password(password):
+        flash("Invalid username or password for local account", "danger")
+        return None
+    return user
+
+
+def _handle_ldap_login(username, password):
+    """Handles the logic for an LDAP user login."""
+    is_authenticated, is_admin, is_editor = authenticate_ldap_user(username, password)
+    if not is_authenticated:
+        flash("Invalid username or password for LDAP account", "danger")
+        return None
+
+    user = User.query.filter_by(username=username, auth_source="ldap").first()
+    if not user:
+        user = User(username=username, auth_source="ldap", is_admin=is_admin, is_editor=is_editor)
+        db.session.add(user)
+    else:
+        user.is_admin = is_admin
+        user.is_editor = is_editor
+    db.session.commit()
+    return user
+
+
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
@@ -52,35 +79,11 @@ def login():
         username = request.form.get("username")
         password = request.form.get("password")
 
-        if auth_type == "local" and not current_app.config["ENABLE_LOCAL_LOGIN"]:
-            flash("Local login is disabled.", "warning")
-            return redirect(url_for("auth.login"))
-        if auth_type == "ldap" and not current_app.config["ENABLE_LDAP_LOGIN"]:
-            flash("LDAP login is disabled.", "warning")
-            return redirect(url_for("auth.login"))
-
         user = None
-
         if auth_type == "local":
-            user = User.query.filter_by(username=username).first()
-            if user is None or not user.check_password(password):
-                flash("Invalid username or password for local account", "danger")
-                return redirect(url_for("auth.login"))
-
+            user = _handle_local_login(username, password)
         elif auth_type == "ldap":
-            is_authenticated, is_admin, is_editor = authenticate_ldap_user(username, password)
-            if is_authenticated:
-                user = User.query.filter_by(username=username, auth_source="ldap").first()
-                if not user:
-                    user = User(username=username, auth_source="ldap", is_admin=is_admin, is_editor=is_editor)
-                    db.session.add(user)
-                else:
-                    user.is_admin = is_admin
-                    user.is_editor = is_editor
-                db.session.commit()
-            else:
-                flash("Invalid username or password for LDAP account", "danger")
-                return redirect(url_for("auth.login"))
+            user = _handle_ldap_login(username, password)
 
         if user:
             login_user(user, remember=True)
@@ -88,6 +91,8 @@ def login():
             if not next_page or urlparse(next_page).netloc != "":
                 next_page = url_for("main.index")
             return redirect(next_page)
+
+        return redirect(url_for("auth.login"))
 
     return render_template("auth/login.html", title="Sign In")
 

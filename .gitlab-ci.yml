@@ -1,0 +1,44 @@
+# This file is part of Blackbook.
+#
+# Blackbook is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Blackbook is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
+
+image: python:3.11
+
+stages:
+  - lint
+
+before_script:
+  - pip install -r requirements.txt
+  - pip install -r requirements-dev.txt
+
+black:
+  stage: lint
+  script:
+    - black --check --diff --line-length=112 .
+
+isort:
+  stage: lint
+  script:
+    - isort --check-only --diff --profile black .
+
+flake8:
+  stage: lint
+  script:
+    - flake8 --max-line-length=112 .
+
+pylint:
+  stage: lint
+  script:
+    # We specify the rcfile to ensure pylint picks up our configuration
+    - pylint --rcfile=pyproject.toml app/

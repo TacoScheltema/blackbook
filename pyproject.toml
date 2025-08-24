@@ -12,4 +12,8 @@ disable = [
     "C0115", # missing-class-docstring
     "C0116", # missing-function-docstring
     "R0903", # too-few-public-methods
+    "W0622", # redefined-builtin
+    "C0415", # import-outside-toplevel
+    "R0401", # cyclic-import
+    "C0413", # wrong-import-position
 ]
