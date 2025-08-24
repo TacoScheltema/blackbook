@@ -79,75 +79,84 @@ def get_pagination_params(total_items, page, page_size):
     return range(start_page, end_page + 1), total_pages
 
 
+def _get_index_request_args():
+    """Helper to get and process request arguments for the index page."""
+    args = {
+        "search_query": request.args.get("q", ""),
+        "sort_by": request.args.get("sort_by", "sn"),
+        "sort_order": request.args.get("sort_order", "asc"),
+        "letter": request.args.get("letter", ""),
+    }
+
+    page_size_options = get_config("PAGE_SIZE_OPTIONS")
+    default_page_size = get_config("DEFAULT_PAGE_SIZE")
+    page_size_from_request = request.args.get("page_size", type=int)
+
+    if page_size_from_request and page_size_from_request in page_size_options:
+        args["page_size"] = page_size_from_request
+        if current_user.page_size != args["page_size"]:
+            current_user.page_size = args["page_size"]
+            db.session.commit()
+    else:
+        args["page_size"] = current_user.page_size or default_page_size
+
+    try:
+        args["page"] = int(request.args.get("page", 1))
+    except ValueError:
+        args["page"] = 1
+
+    return args
+
+
+def _filter_and_sort_people(all_people, args):
+    """Helper to filter and sort the list of people."""
+    if args["search_query"]:
+        query = args["search_query"].lower()
+        all_people = [p for p in all_people if p.get("cn") and p["cn"] and query in p["cn"][0].lower()]
+
+    if args["letter"]:
+        all_people = [
+            p for p in all_people if p.get("sn") and p["sn"] and p["sn"][0].upper().startswith(args["letter"])
+        ]
+
+    if args["sort_by"] in get_config("LDAP_PERSON_ATTRIBUTES"):
+        all_people.sort(
+            key=lambda p: (p.get(args["sort_by"])[0] if p.get(args["sort_by"]) else "").lower(),
+            reverse=(args["sort_order"] == "desc"),
+        )
+    return all_people
+
+
 @bp.route("/")
 @login_required
 def index():
     """Main index page. Now only shows a paginated list of all persons."""
-    search_query = request.args.get("q", "")
-    sort_by = request.args.get("sort_by", "sn")  # Default sort by Surname
-    sort_order = request.args.get("sort_order", "asc")
-    letter = request.args.get("letter", "")
-
-    page_size_options = get_config("PAGE_SIZE_OPTIONS")
-    default_page_size = get_config("DEFAULT_PAGE_SIZE")
-
-    page_size_from_request = request.args.get("page_size", type=int)
-
-    if page_size_from_request and page_size_from_request in page_size_options:
-        page_size = page_size_from_request
-        if current_user.page_size != page_size:
-            current_user.page_size = page_size
-            db.session.commit()
-    else:
-        page_size = current_user.page_size
-
-    if page_size is None:
-        page_size = default_page_size
-
-    try:
-        page = int(request.args.get("page", 1))
-    except ValueError:
-        page = 1
-
+    args = _get_index_request_args()
     all_people = cache.get("all_people") or []
+    filtered_people = _filter_and_sort_people(all_people, args)
 
-    if search_query:
-        query = search_query.lower()
-        all_people = [p for p in all_people if p.get("cn") and p["cn"] and query in p["cn"][0].lower()]
+    total_people = len(filtered_people)
+    start_index = (args["page"] - 1) * args["page_size"]
+    end_index = start_index + args["page_size"]
+    people_on_page = filtered_people[start_index:end_index]
 
-    if letter:
-        all_people = [
-            p for p in all_people if p.get("sn") and p["sn"] and p["sn"][0].upper().startswith(letter)
-        ]
-
-    if sort_by in get_config("LDAP_PERSON_ATTRIBUTES"):
-        all_people.sort(
-            key=lambda p: (p.get(sort_by)[0] if p.get(sort_by) else "").lower(),
-            reverse=(sort_order == "desc"),
-        )
-
-    total_people = len(all_people)
-    start_index = (page - 1) * page_size
-    end_index = start_index + page_size
-    people_on_page = all_people[start_index:end_index]
-
-    page_numbers, total_pages = get_pagination_params(total_people, page, page_size)
+    page_numbers, total_pages = get_pagination_params(total_people, args["page"], args["page_size"])
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     return render_template(
         "index.html",
         title="Address Book",
         people=people_on_page,
-        search_query=search_query,
-        page=page,
-        page_size=page_size,
+        search_query=args["search_query"],
+        page=args["page"],
+        page_size=args["page_size"],
         total_pages=total_pages,
         total_people=total_people,
         page_numbers=page_numbers,
-        sort_by=sort_by,
-        sort_order=sort_order,
+        sort_by=args["sort_by"],
+        sort_order=args["sort_order"],
         alphabet=alphabet,
-        letter=letter,
+        letter=args["letter"],
     )
 
 
