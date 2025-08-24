@@ -1,3 +1,17 @@
+# This file is part of Blackbook.
+#
+# Blackbook is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Blackbook is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 import pprint
 from urllib.parse import urlparse
 
@@ -54,14 +68,15 @@ def login():
                 return redirect(url_for("auth.login"))
 
         elif auth_type == "ldap":
-            is_authenticated, is_admin = authenticate_ldap_user(username, password)
+            is_authenticated, is_admin, is_editor = authenticate_ldap_user(username, password)
             if is_authenticated:
                 user = User.query.filter_by(username=username, auth_source="ldap").first()
                 if not user:
-                    user = User(username=username, auth_source="ldap", is_admin=is_admin)
+                    user = User(username=username, auth_source="ldap", is_admin=is_admin, is_editor=is_editor)
                     db.session.add(user)
                 else:
                     user.is_admin = is_admin
+                    user.is_editor = is_editor
                 db.session.commit()
             else:
                 flash("Invalid username or password for LDAP account", "danger")
@@ -198,16 +213,23 @@ def authorize(provider):
         if admin_group and "groups" in user_info and admin_group in user_info["groups"]:
             is_admin = True
 
+        is_editor = False
+        editor_group = current_app.config.get(f"{provider.upper()}_EDITOR_GROUP")
+        if editor_group and "groups" in user_info and editor_group in user_info["groups"]:
+            is_editor = True
+
         if not user:
             user = User(
                 username=sso_user_id,
                 email=user_info.get("email"),
                 auth_source="sso",
                 is_admin=is_admin,
+                is_editor=is_editor,
             )
             db.session.add(user)
         else:
             user.is_admin = is_admin
+            user.is_editor = is_editor
 
         db.session.commit()
         login_user(user, remember=True)
