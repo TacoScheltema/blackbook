@@ -14,6 +14,7 @@
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 import base64
 import math
+import uuid
 from datetime import datetime
 from functools import wraps
 
@@ -361,7 +362,10 @@ def add_person():
             flash("LDAP contact DN template is not configured.", "danger")
             return redirect(url_for("main.add_person"))
 
-        new_dn = dn_template.format(cn=attributes["cn"])
+        # Generate a UUID for the new contact
+        new_uid = str(uuid.uuid4())
+        attributes["uid"] = new_uid
+        new_dn = dn_template.format(uid=new_uid)
         object_classes = get_config("LDAP_PERSON_OBJECT_CLASS").split(",")
 
         if add_ldap_entry(new_dn, object_classes, attributes):
