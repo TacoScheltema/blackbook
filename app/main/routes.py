@@ -460,6 +460,42 @@ def admin_cache():
     return render_template("admin/cache.html", title="Cache Status", jobs=jobs)
 
 
+def _add_local_user(username, email, password):
+    """Helper function to add a local user."""
+    if not email:
+        flash("Email is required for local users.", "warning")
+        return False
+    if User.query.filter_by(email=email).first():
+        flash("Email address already in use.", "danger")
+        return False
+
+    user = User(username=username, email=email, auth_source="local")
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    flash("Local user added successfully.", "success")
+    return True
+
+
+def _add_ldap_user(username, password, email, given_name, surname):
+    """Helper function to add an LDAP user."""
+    if not all([given_name, surname, email]):
+        flash("Given Name, Surname, and Email are required for LDAP users.", "warning")
+        return False
+
+    if User.query.filter_by(email=email).first():
+        flash("Email address already in use by another user.", "danger")
+        return False
+
+    if add_ldap_user(username, password, email, given_name, surname):
+        user = User(username=username, email=email, auth_source="ldap")
+        db.session.add(user)
+        db.session.commit()
+        flash("LDAP user added successfully.", "success")
+        return True
+    return False
+
+
 @bp.route("/admin/add_user", methods=["POST"])
 @login_required
 @admin_required
@@ -478,35 +514,11 @@ def add_user():
         return redirect(url_for("main.admin_users"))
 
     if auth_type == "local":
-        if not email:
-            flash("Email is required for local users.", "warning")
-            return redirect(url_for("main.admin_users"))
-        if User.query.filter_by(email=email).first():
-            flash("Email address already in use.", "danger")
-            return redirect(url_for("main.admin_users"))
-
-        user = User(username=username, email=email, auth_source="local")
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        flash("Local user added successfully.", "success")
-
+        _add_local_user(username, email, password)
     elif auth_type == "ldap":
         given_name = request.form.get("given_name")
         surname = request.form.get("surname")
-        if not all([given_name, surname, email]):
-            flash("Given Name, Surname, and Email are required for LDAP users.", "warning")
-            return redirect(url_for("main.admin_users"))
-
-        if User.query.filter_by(email=email).first():
-            flash("Email address already in use by another user.", "danger")
-            return redirect(url_for("main.admin_users"))
-
-        if add_ldap_user(username, password, email, given_name, surname):
-            user = User(username=username, email=email, auth_source="ldap")
-            db.session.add(user)
-            db.session.commit()
-            flash("LDAP user added successfully.", "success")
+        _add_ldap_user(username, password, email, given_name, surname)
 
     return redirect(url_for("main.admin_users"))
 
