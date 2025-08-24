@@ -21,3 +21,8 @@ repos:
     hooks:
     -   id: flake8
         args: [--max-line-length=112]
+-   repo: https://github.com/PyCQA/pylint
+    rev: v3.2.5 # Use the latest stable version
+    hooks:
+      - id: pylint
+        args: ["--rcfile=pyproject.toml"] # Optional: if you have a custom Pylint config

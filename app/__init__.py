@@ -89,7 +89,7 @@ def create_app(config_class=Config):
     # Make the config available to all templates.
     @app.context_processor
     def inject_config():
-        return dict(config=app.config)
+        return {"config": app.config}
 
     # Register custom Jinja2 filter
     app.jinja_env.filters["b64encode"] = b64encode_filter
@@ -106,6 +106,7 @@ def create_app(config_class=Config):
         if current_user.is_authenticated and current_user.password_reset_required:
             if request.endpoint and request.endpoint not in ["auth.reset_password", "auth.logout", "static"]:
                 return redirect(url_for("auth.reset_password"))
+        return None
 
     # --- Start Background Scheduler ---
     from app.jobs import refresh_ldap_cache
@@ -122,6 +123,6 @@ def create_app(config_class=Config):
     )
     scheduler.start()
     # Ensure the scheduler is shut down when the app exits
-    atexit.register(lambda: scheduler.shutdown())
+    atexit.register(scheduler.shutdown)
 
     return app

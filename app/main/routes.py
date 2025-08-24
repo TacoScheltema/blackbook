@@ -68,92 +68,95 @@ def b64decode_with_padding(s):
     return base64.urlsafe_b64decode(s).decode("utf-8")
 
 
+def get_pagination_params(total_items, page, page_size):
+    """Helper function to calculate pagination parameters."""
+    total_pages = math.ceil(total_items / page_size)
+    pages_to_show = 6
+    start_page = max(1, page - (pages_to_show // 2))
+    end_page = min(total_pages, start_page + pages_to_show - 1)
+    if end_page - start_page + 1 < pages_to_show:
+        start_page = max(1, end_page - pages_to_show + 1)
+    return range(start_page, end_page + 1), total_pages
+
+
+def _get_index_request_args():
+    """Helper to get and process request arguments for the index page."""
+    args = {
+        "search_query": request.args.get("q", ""),
+        "sort_by": request.args.get("sort_by", "sn"),
+        "sort_order": request.args.get("sort_order", "asc"),
+        "letter": request.args.get("letter", ""),
+    }
+
+    page_size_options = get_config("PAGE_SIZE_OPTIONS")
+    default_page_size = get_config("DEFAULT_PAGE_SIZE")
+    page_size_from_request = request.args.get("page_size", type=int)
+
+    if page_size_from_request and page_size_from_request in page_size_options:
+        args["page_size"] = page_size_from_request
+        if current_user.page_size != args["page_size"]:
+            current_user.page_size = args["page_size"]
+            db.session.commit()
+    else:
+        args["page_size"] = current_user.page_size or default_page_size
+
+    try:
+        args["page"] = int(request.args.get("page", 1))
+    except ValueError:
+        args["page"] = 1
+
+    return args
+
+
+def _filter_and_sort_people(all_people, args):
+    """Helper to filter and sort the list of people."""
+    if args["search_query"]:
+        query = args["search_query"].lower()
+        all_people = [p for p in all_people if p.get("cn") and p["cn"] and query in p["cn"][0].lower()]
+
+    if args["letter"]:
+        all_people = [
+            p for p in all_people if p.get("sn") and p["sn"] and p["sn"][0].upper().startswith(args["letter"])
+        ]
+
+    if args["sort_by"] in get_config("LDAP_PERSON_ATTRIBUTES"):
+        all_people.sort(
+            key=lambda p: (p.get(args["sort_by"])[0] if p.get(args["sort_by"]) else "").lower(),
+            reverse=(args["sort_order"] == "desc"),
+        )
+    return all_people
+
+
 @bp.route("/")
 @login_required
 def index():
     """Main index page. Now only shows a paginated list of all persons."""
-    search_query = request.args.get("q", "")
-    sort_by = request.args.get("sort_by", "sn")  # Default sort by Surname
-    sort_order = request.args.get("sort_order", "asc")
-    letter = request.args.get("letter", "")
-
-    page_size_options = get_config("PAGE_SIZE_OPTIONS")
-    default_page_size = get_config("DEFAULT_PAGE_SIZE")
-
-    # Get page size from request args first.
-    page_size_from_request = request.args.get("page_size", type=int)
-
-    if page_size_from_request and page_size_from_request in page_size_options:
-        page_size = page_size_from_request
-        # If the user's choice is different from what's stored, update it.
-        if current_user.page_size != page_size:
-            current_user.page_size = page_size
-            db.session.commit()
-    else:
-        # If no valid page size in request, use the one stored for the user.
-        page_size = current_user.page_size
-
-    # If, after all that, page_size is still None (e.g., for a pre-existing user),
-    # fall back to the application default to prevent errors.
-    if page_size is None:
-        page_size = default_page_size
-
-    try:
-        page = int(request.args.get("page", 1))
-    except ValueError:
-        page = 1
-
-    # Get the full list of people directly from the cache.
+    args = _get_index_request_args()
     all_people = cache.get("all_people") or []
+    filtered_people = _filter_and_sort_people(all_people, args)
 
-    if search_query:
-        query = search_query.lower()
-        all_people = [p for p in all_people if p.get("cn") and p["cn"] and query in p["cn"][0].lower()]
+    total_people = len(filtered_people)
+    start_index = (args["page"] - 1) * args["page_size"]
+    end_index = start_index + args["page_size"]
+    people_on_page = filtered_people[start_index:end_index]
 
-    if letter:
-        all_people = [
-            p for p in all_people if p.get("sn") and p["sn"] and p["sn"][0].upper().startswith(letter)
-        ]
-
-    # Sort the entire list before pagination
-    if sort_by in get_config("LDAP_PERSON_ATTRIBUTES"):
-        all_people.sort(
-            key=lambda p: (p.get(sort_by)[0] if p.get(sort_by) else "").lower(),
-            reverse=(sort_order == "desc"),
-        )
-
-    total_people = len(all_people)
-
-    start_index = (page - 1) * page_size
-    end_index = start_index + page_size
-    people_on_page = all_people[start_index:end_index]
-
-    total_pages = math.ceil(total_people / page_size)
-
-    PAGES_TO_SHOW = 6
-    start_page = max(1, page - (PAGES_TO_SHOW // 2))
-    end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
-
-    if end_page - start_page + 1 < PAGES_TO_SHOW:
-        start_page = max(1, end_page - PAGES_TO_SHOW + 1)
-
-    page_numbers = range(start_page, end_page + 1)
+    page_numbers, total_pages = get_pagination_params(total_people, args["page"], args["page_size"])
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     return render_template(
         "index.html",
         title="Address Book",
         people=people_on_page,
-        search_query=search_query,
-        page=page,
-        page_size=page_size,
+        search_query=args["search_query"],
+        page=args["page"],
+        page_size=args["page_size"],
         total_pages=total_pages,
         total_people=total_people,
         page_numbers=page_numbers,
-        sort_by=sort_by,
-        sort_order=sort_order,
+        sort_by=args["sort_by"],
+        sort_order=args["sort_order"],
         alphabet=alphabet,
-        letter=letter,
+        letter=args["letter"],
     )
 
 
@@ -165,7 +168,6 @@ def all_companies():
     all_people = cache.get("all_people") or []
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
-    # Create a unique, sorted list of company names
     company_names = sorted(
         list(
             set(
@@ -184,18 +186,12 @@ def all_companies():
     except ValueError:
         page = 1
 
-    PAGE_SIZE = 20
-    start_index = (page - 1) * PAGE_SIZE
-    end_index = start_index + PAGE_SIZE
+    page_size = 20
+    start_index = (page - 1) * page_size
+    end_index = start_index + page_size
     companies_on_page = company_names[start_index:end_index]
-    total_pages = math.ceil(total_companies / PAGE_SIZE)
 
-    PAGES_TO_SHOW = 6
-    start_page = max(1, page - (PAGES_TO_SHOW // 2))
-    end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
-    if end_page - start_page + 1 < PAGES_TO_SHOW:
-        start_page = max(1, end_page - PAGES_TO_SHOW + 1)
-    page_numbers = range(start_page, end_page + 1)
+    page_numbers, total_pages = get_pagination_params(total_companies, page, page_size)
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     return render_template(
@@ -277,7 +273,6 @@ def person_detail(b64_dn):
         if manager:
             manager_name = manager.get("cn", [None])[0]
 
-    # Capture all relevant query params to pass them back for the "back" button
     back_params = {
         "page": request.args.get("page"),
         "page_size": request.args.get("page_size"),
@@ -342,7 +337,6 @@ def add_person():
     all_people = cache.get("all_people") or []
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
-    # Create a map of companies to their employees for the manager dropdown
     company_employees = {}
     for person in all_people:
         company = (person.get(company_link_attr) or [None])[0]
@@ -374,14 +368,13 @@ def add_person():
             flash("Contact added successfully! The list will refresh shortly.", "success")
             scheduler.add_job(
                 func=refresh_ldap_cache,
-                args=[current_app._get_current_object()],
+                args=[current_app._get_current_object()],  # pylint: disable=protected-access
                 id="manual_refresh_add",
                 replace_existing=True,
             )
             return redirect(url_for("main.index"))
-        else:
-            # The add_ldap_entry function will flash the specific LDAP error
-            return redirect(url_for("main.add_person"))
+
+        return redirect(url_for("main.add_person"))
 
     return render_template("add_person.html", title="Add New Contact", company_employees=company_employees)
 
@@ -401,7 +394,6 @@ def edit_person(b64_dn):
     if not current_person:
         abort(404)
 
-    # Get potential managers (colleagues in the same company)
     potential_managers = []
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
     person_company = (current_person.get(company_link_attr) or [None])[0]
@@ -433,7 +425,7 @@ def edit_person(b64_dn):
             flash("Person details updated successfully! The list will refresh shortly.", "success")
             scheduler.add_job(
                 func=refresh_ldap_cache,
-                args=[current_app._get_current_object()],
+                args=[current_app._get_current_object()],  # pylint: disable=protected-access
                 id="manual_refresh_edit",
                 replace_existing=True,
             )
@@ -477,6 +469,42 @@ def admin_cache():
     return render_template("admin/cache.html", title="Cache Status", jobs=jobs)
 
 
+def _add_local_user(username, email, password):
+    """Helper function to add a local user."""
+    if not email:
+        flash("Email is required for local users.", "warning")
+        return False
+    if User.query.filter_by(email=email).first():
+        flash("Email address already in use.", "danger")
+        return False
+
+    user = User(username=username, email=email, auth_source="local")
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    flash("Local user added successfully.", "success")
+    return True
+
+
+def _add_ldap_user(username, password, email, given_name, surname):
+    """Helper function to add an LDAP user."""
+    if not all([given_name, surname, email]):
+        flash("Given Name, Surname, and Email are required for LDAP users.", "warning")
+        return False
+
+    if User.query.filter_by(email=email).first():
+        flash("Email address already in use by another user.", "danger")
+        return False
+
+    if add_ldap_user(username, password, email, given_name, surname):
+        user = User(username=username, email=email, auth_source="ldap")
+        db.session.add(user)
+        db.session.commit()
+        flash("LDAP user added successfully.", "success")
+        return True
+    return False
+
+
 @bp.route("/admin/add_user", methods=["POST"])
 @login_required
 @admin_required
@@ -495,35 +523,11 @@ def add_user():
         return redirect(url_for("main.admin_users"))
 
     if auth_type == "local":
-        if not email:
-            flash("Email is required for local users.", "warning")
-            return redirect(url_for("main.admin_users"))
-        if User.query.filter_by(email=email).first():
-            flash("Email address already in use.", "danger")
-            return redirect(url_for("main.admin_users"))
-
-        user = User(username=username, email=email, auth_source="local")
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        flash("Local user added successfully.", "success")
-
+        _add_local_user(username, email, password)
     elif auth_type == "ldap":
         given_name = request.form.get("given_name")
         surname = request.form.get("surname")
-        if not all([given_name, surname, email]):
-            flash("Given Name, Surname, and Email are required for LDAP users.", "warning")
-            return redirect(url_for("main.admin_users"))
-
-        if User.query.filter_by(email=email).first():
-            flash("Email address already in use by another user.", "danger")
-            return redirect(url_for("main.admin_users"))
-
-        if add_ldap_user(username, password, email, given_name, surname):
-            user = User(username=username, email=email, auth_source="ldap")
-            db.session.add(user)
-            db.session.commit()
-            flash("LDAP user added successfully.", "success")
+        _add_ldap_user(username, password, email, given_name, surname)
 
     return redirect(url_for("main.admin_users"))
 
