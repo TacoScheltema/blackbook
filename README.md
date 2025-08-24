@@ -4,6 +4,11 @@ This is a production-ready, configurable web application that serves as an onlin
 
 The application allows users to browse, search, add, edit and view contact and company information from an LDAP server in a clean, fast, and user-friendly interface.
 
+## License
+
+Licensed under the GNU General Public License v3.0 (GPLv3).
+See the LICENSE file for details.
+
 ## **Features**
 
 * **Secure Authentication**: Multiple authentication options, including local database users, direct LDAP bind, and Single Sign-On (SSO) via Google, Keycloak, or Authentik.
