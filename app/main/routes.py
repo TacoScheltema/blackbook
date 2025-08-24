@@ -130,12 +130,12 @@ def index():
 
     total_pages = math.ceil(total_people / page_size)
 
-    PAGES_TO_SHOW = 6
-    start_page = max(1, page - (PAGES_TO_SHOW // 2))
-    end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
+    pages_to_show = 6
+    start_page = max(1, page - (pages_to_show // 2))
+    end_page = min(total_pages, start_page + pages_to_show - 1)
 
-    if end_page - start_page + 1 < PAGES_TO_SHOW:
-        start_page = max(1, end_page - PAGES_TO_SHOW + 1)
+    if end_page - start_page + 1 < pages_to_show:
+        start_page = max(1, end_page - pages_to_show + 1)
 
     page_numbers = range(start_page, end_page + 1)
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -184,17 +184,17 @@ def all_companies():
     except ValueError:
         page = 1
 
-    PAGE_SIZE = 20
-    start_index = (page - 1) * PAGE_SIZE
-    end_index = start_index + PAGE_SIZE
+    page_size = 20
+    start_index = (page - 1) * page_size
+    end_index = start_index + page_size
     companies_on_page = company_names[start_index:end_index]
-    total_pages = math.ceil(total_companies / PAGE_SIZE)
+    total_pages = math.ceil(total_companies / page_size)
 
-    PAGES_TO_SHOW = 6
-    start_page = max(1, page - (PAGES_TO_SHOW // 2))
-    end_page = min(total_pages, start_page + PAGES_TO_SHOW - 1)
-    if end_page - start_page + 1 < PAGES_TO_SHOW:
-        start_page = max(1, end_page - PAGES_TO_SHOW + 1)
+    pages_to_show = 6
+    start_page = max(1, page - (pages_to_show // 2))
+    end_page = min(total_pages, start_page + pages_to_show - 1)
+    if end_page - start_page + 1 < pages_to_show:
+        start_page = max(1, end_page - pages_to_show + 1)
     page_numbers = range(start_page, end_page + 1)
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -374,14 +374,14 @@ def add_person():
             flash("Contact added successfully! The list will refresh shortly.", "success")
             scheduler.add_job(
                 func=refresh_ldap_cache,
-                args=[current_app._get_current_object()],
+                args=[current_app._get_current_object()],  # pylint: disable=protected-access
                 id="manual_refresh_add",
                 replace_existing=True,
             )
             return redirect(url_for("main.index"))
-        else:
-            # The add_ldap_entry function will flash the specific LDAP error
-            return redirect(url_for("main.add_person"))
+
+        # The add_ldap_entry function will flash the specific LDAP error
+        return redirect(url_for("main.add_person"))
 
     return render_template("add_person.html", title="Add New Contact", company_employees=company_employees)
 
@@ -433,7 +433,7 @@ def edit_person(b64_dn):
             flash("Person details updated successfully! The list will refresh shortly.", "success")
             scheduler.add_job(
                 func=refresh_ldap_cache,
-                args=[current_app._get_current_object()],
+                args=[current_app._get_current_object()],  # pylint: disable=protected-access
                 id="manual_refresh_edit",
                 replace_existing=True,
             )
