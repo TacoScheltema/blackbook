@@ -23,9 +23,12 @@ def refresh_ldap_cache(app):
     """
     with app.app_context():
         print("SCHEDULER: Refreshing LDAP contact cache...")
-        person_class = app.config["LDAP_PERSON_OBJECT_CLASS"]
+        person_classes = app.config["LDAP_PERSON_OBJECT_CLASS"].split(",")
         person_attrs = app.config["LDAP_PERSON_ATTRIBUTES"]
-        search_filter = f"(objectClass={person_class})"
+        search_filter = "".join([f"(objectClass={cls})" for cls in person_classes])
+        if len(person_classes) > 1:
+            search_filter = f"(&{search_filter})"
+
         contacts_dn = app.config["LDAP_CONTACTS_DN"]
 
         people_list = search_ldap(search_filter, person_attrs, search_base=contacts_dn)

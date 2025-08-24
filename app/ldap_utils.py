@@ -17,7 +17,7 @@ import hashlib
 import os
 
 import ldap3
-from flask import current_app, flash
+from flask import current_app, flash, has_request_context
 from ldap3.core.exceptions import LDAPException
 
 
@@ -211,7 +211,8 @@ def search_ldap(filter_str, attributes, size_limit=0, search_base=None):
         return results
     except LDAPException as e:
         print(f"LDAP search failed: {e}")
-        flash("An error occurred while searching the directory.", "warning")
+        if has_request_context():
+            flash("An error occurred while searching the directory.", "warning")
         return []
     finally:
         if conn:
@@ -239,7 +240,8 @@ def get_entry_by_dn(dn, attributes):
         return None
     except LDAPException as e:
         print(f"Failed to fetch entry by DN '{dn}': {e}")
-        flash("Could not retrieve the specified entry.", "warning")
+        if has_request_context():
+            flash("Could not retrieve the specified entry.", "warning")
         return None
     finally:
         if conn:
