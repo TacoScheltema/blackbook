@@ -20,6 +20,7 @@ stages:
 
 before_script:
   - pip install -r requirements.txt
+  - pip install -r requirements-dev.txt
 
 black:
   stage: lint
