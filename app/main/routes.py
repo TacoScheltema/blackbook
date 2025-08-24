@@ -68,6 +68,17 @@ def b64decode_with_padding(s):
     return base64.urlsafe_b64decode(s).decode("utf-8")
 
 
+def get_pagination_params(total_items, page, page_size):
+    """Helper function to calculate pagination parameters."""
+    total_pages = math.ceil(total_items / page_size)
+    pages_to_show = 6
+    start_page = max(1, page - (pages_to_show // 2))
+    end_page = min(total_pages, start_page + pages_to_show - 1)
+    if end_page - start_page + 1 < pages_to_show:
+        start_page = max(1, end_page - pages_to_show + 1)
+    return range(start_page, end_page + 1), total_pages
+
+
 @bp.route("/")
 @login_required
 def index():
@@ -80,21 +91,16 @@ def index():
     page_size_options = get_config("PAGE_SIZE_OPTIONS")
     default_page_size = get_config("DEFAULT_PAGE_SIZE")
 
-    # Get page size from request args first.
     page_size_from_request = request.args.get("page_size", type=int)
 
     if page_size_from_request and page_size_from_request in page_size_options:
         page_size = page_size_from_request
-        # If the user's choice is different from what's stored, update it.
         if current_user.page_size != page_size:
             current_user.page_size = page_size
             db.session.commit()
     else:
-        # If no valid page size in request, use the one stored for the user.
         page_size = current_user.page_size
 
-    # If, after all that, page_size is still None (e.g., for a pre-existing user),
-    # fall back to the application default to prevent errors.
     if page_size is None:
         page_size = default_page_size
 
@@ -103,7 +109,6 @@ def index():
     except ValueError:
         page = 1
 
-    # Get the full list of people directly from the cache.
     all_people = cache.get("all_people") or []
 
     if search_query:
@@ -115,7 +120,6 @@ def index():
             p for p in all_people if p.get("sn") and p["sn"] and p["sn"][0].upper().startswith(letter)
         ]
 
-    # Sort the entire list before pagination
     if sort_by in get_config("LDAP_PERSON_ATTRIBUTES"):
         all_people.sort(
             key=lambda p: (p.get(sort_by)[0] if p.get(sort_by) else "").lower(),
@@ -123,21 +127,11 @@ def index():
         )
 
     total_people = len(all_people)
-
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
     people_on_page = all_people[start_index:end_index]
 
-    total_pages = math.ceil(total_people / page_size)
-
-    pages_to_show = 6
-    start_page = max(1, page - (pages_to_show // 2))
-    end_page = min(total_pages, start_page + pages_to_show - 1)
-
-    if end_page - start_page + 1 < pages_to_show:
-        start_page = max(1, end_page - pages_to_show + 1)
-
-    page_numbers = range(start_page, end_page + 1)
+    page_numbers, total_pages = get_pagination_params(total_people, page, page_size)
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     return render_template(
@@ -165,7 +159,6 @@ def all_companies():
     all_people = cache.get("all_people") or []
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
-    # Create a unique, sorted list of company names
     company_names = sorted(
         list(
             set(
@@ -188,14 +181,8 @@ def all_companies():
     start_index = (page - 1) * page_size
     end_index = start_index + page_size
     companies_on_page = company_names[start_index:end_index]
-    total_pages = math.ceil(total_companies / page_size)
 
-    pages_to_show = 6
-    start_page = max(1, page - (pages_to_show // 2))
-    end_page = min(total_pages, start_page + pages_to_show - 1)
-    if end_page - start_page + 1 < pages_to_show:
-        start_page = max(1, end_page - pages_to_show + 1)
-    page_numbers = range(start_page, end_page + 1)
+    page_numbers, total_pages = get_pagination_params(total_companies, page, page_size)
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     return render_template(
@@ -277,7 +264,6 @@ def person_detail(b64_dn):
         if manager:
             manager_name = manager.get("cn", [None])[0]
 
-    # Capture all relevant query params to pass them back for the "back" button
     back_params = {
         "page": request.args.get("page"),
         "page_size": request.args.get("page_size"),
@@ -342,7 +328,6 @@ def add_person():
     all_people = cache.get("all_people") or []
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
-    # Create a map of companies to their employees for the manager dropdown
     company_employees = {}
     for person in all_people:
         company = (person.get(company_link_attr) or [None])[0]
@@ -380,7 +365,6 @@ def add_person():
             )
             return redirect(url_for("main.index"))
 
-        # The add_ldap_entry function will flash the specific LDAP error
         return redirect(url_for("main.add_person"))
 
     return render_template("add_person.html", title="Add New Contact", company_employees=company_employees)
@@ -401,7 +385,6 @@ def edit_person(b64_dn):
     if not current_person:
         abort(404)
 
-    # Get potential managers (colleagues in the same company)
     potential_managers = []
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
     person_company = (current_person.get(company_link_attr) or [None])[0]
