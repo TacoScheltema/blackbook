@@ -25,7 +25,14 @@ from flask_login import current_user, login_required
 from app import cache, db, scheduler
 from app.email import send_password_reset_email
 from app.jobs import refresh_ldap_cache
-from app.ldap_utils import add_ldap_entry, add_ldap_user, delete_ldap_user, get_entry_by_dn, modify_ldap_entry
+from app.ldap_utils import (
+    add_ldap_entry,
+    add_ldap_user,
+    delete_ldap_contact,
+    delete_ldap_user,
+    get_entry_by_dn,
+    modify_ldap_entry,
+)
 from app.main import bp
 from app.main.countries import countries
 from app.models import User
@@ -447,6 +454,30 @@ def edit_person(b64_dn):
         potential_managers=potential_managers,
         countries=countries,
     )
+
+
+@bp.route("/person/delete/<b64_dn>", methods=["POST"])
+@login_required
+@editor_required
+def delete_person(b64_dn):
+    """Handles deletion of a person entry."""
+    try:
+        dn = b64decode_with_padding(b64_dn)
+    except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    if delete_ldap_contact(dn):
+        flash("Contact deleted successfully! The list will refresh shortly.", "success")
+        scheduler.add_job(
+            func=refresh_ldap_cache,
+            args=[current_app._get_current_object()],  # pylint: disable=protected-access
+            id="manual_refresh_delete",
+            replace_existing=True,
+        )
+    else:
+        flash("Failed to delete contact.", "danger")
+
+    return redirect(url_for("main.index"))
 
 
 # --- Admin Routes ---
