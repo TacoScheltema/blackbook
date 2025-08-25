@@ -27,6 +27,13 @@
                                 <option value="{{ company }}">
                             {% endfor %}
                         </datalist>
+                    {% elif attr_name == 'c' %}
+                        <select class="form-select" id="c" name="c">
+                            <option value="">Select a country</option>
+                            {% for code, name in countries.items()|sort(attribute=1) %}
+                                <option value="{{ code }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
                     {% else %}
                         {% set input_type = 'text' %}
                         {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
