@@ -27,6 +27,7 @@ from app.email import send_password_reset_email
 from app.jobs import refresh_ldap_cache
 from app.ldap_utils import add_ldap_entry, add_ldap_user, delete_ldap_user, get_entry_by_dn, modify_ldap_entry
 from app.main import bp
+from app.main.countries import countries
 from app.models import User
 
 
@@ -362,10 +363,9 @@ def add_person():
             flash("LDAP contact DN template is not configured.", "danger")
             return redirect(url_for("main.add_person"))
 
-        # Generate a UUID for the new contact
         new_uid = str(uuid.uuid4())
         attributes["uid"] = new_uid
-        new_dn = dn_template.format(uid=new_uid)
+        new_dn = dn_template.format(uid=new_uid, cn=attributes["cn"])
         object_classes = get_config("LDAP_PERSON_OBJECT_CLASS").split(",")
 
         if add_ldap_entry(new_dn, object_classes, attributes):
@@ -380,7 +380,9 @@ def add_person():
 
         return redirect(url_for("main.add_person"))
 
-    return render_template("add_person.html", title="Add New Contact", company_employees=company_employees)
+    return render_template(
+        "add_person.html", title="Add New Contact", company_employees=company_employees, countries=countries
+    )
 
 
 @bp.route("/person/edit/<b64_dn>", methods=["GET", "POST"])
@@ -443,6 +445,7 @@ def edit_person(b64_dn):
         person=current_person,
         b64_dn=b64_dn,
         potential_managers=potential_managers,
+        countries=countries,
     )
 
 
