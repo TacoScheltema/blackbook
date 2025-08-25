@@ -317,7 +317,7 @@ def delete_ldap_contact(dn):
     try:
         # Find subordinates and clear their manager attribute
         search_base = current_app.config["LDAP_CONTACTS_DN"]
-        conn.search(search_base, f"(manager={dn})", attributes=["dn"])
+        conn.search(search_base, f"(manager={dn})", attributes=[])
         for entry in conn.entries:
             conn.modify(entry.entry_dn, {"manager": [(ldap3.MODIFY_DELETE, [])]})
 
