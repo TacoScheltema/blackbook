@@ -306,3 +306,30 @@ def modify_ldap_entry(dn, changes):
     finally:
         if conn:
             conn.unbind()
+
+
+def delete_ldap_contact(dn):
+    """Deletes a contact and updates their subordinates."""
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+
+    try:
+        # Find subordinates and clear their manager attribute
+        search_base = current_app.config["LDAP_CONTACTS_DN"]
+        conn.search(search_base, f"(manager={dn})", attributes=[])
+        for entry in conn.entries:
+            conn.modify(entry.entry_dn, {"manager": [(ldap3.MODIFY_DELETE, [])]})
+
+        # Delete the contact
+        success = conn.delete(dn)
+        if not success:
+            flash(f"LDAP Error: {conn.result['description']}", "danger")
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred during contact deletion: {e}", "danger")
+        return False
+    finally:
+        if conn:
+            conn.unbind()
