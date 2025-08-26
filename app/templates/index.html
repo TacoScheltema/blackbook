@@ -88,7 +88,7 @@
                         {% for person in people %}
                         <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.person_detail', b64_dn=person.dn|b64encode, page=page, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}';">
                             <td>{{ person.givenName[0] if person.givenName else '' }}</td>
-                            <td><strong class="contact-name">{{ person.sn[0] if person.sn else '' }}</strong></td>
+                            <td><span class="contact-name">{{ person.sn[0] if person.sn else '' }}</span></td>
                             <td>
                                 {% if person.mail and person.mail[0] %}
                                     <a href="mailto:{{ person.mail[0] }}" class="person-meta-link" onclick="event.stopPropagation();">{{ person.mail[0] }}</a>
