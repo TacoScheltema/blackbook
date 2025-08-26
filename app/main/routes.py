@@ -92,6 +92,8 @@ def _get_index_request_args():
     """Helper to get and process request arguments for the index page."""
     args = {
         "search_query": request.args.get("q", ""),
+        "sort_by": request.args.get("sort_by", "sn"),
+        "sort_order": request.args.get("sort_order", "asc"),
         "letter": request.args.get("letter", ""),
     }
 
@@ -126,7 +128,11 @@ def _filter_and_sort_people(all_people, args):
             p for p in all_people if p.get("sn") and p["sn"] and p["sn"][0].upper().startswith(args["letter"])
         ]
 
-    all_people.sort(key=lambda p: (p.get("sn")[0] if p.get("sn") else "").lower())
+    if args["sort_by"] in get_config("LDAP_PERSON_ATTRIBUTES"):
+        all_people.sort(
+            key=lambda p: (p.get(args["sort_by"])[0] if p.get(args["sort_by"]) else "").lower(),
+            reverse=(args["sort_order"] == "desc"),
+        )
     return all_people
 
 
@@ -156,6 +162,8 @@ def index():
         total_pages=total_pages,
         total_people=total_people,
         page_numbers=page_numbers,
+        sort_by=args["sort_by"],
+        sort_order=args["sort_order"],
         alphabet=alphabet,
         letter=args["letter"],
     )
@@ -313,6 +321,7 @@ def person_detail(b64_dn):
         b64_dn=b64_dn,
         back_params=back_params,
         manager_name=manager_name,
+        countries=countries,
     )
 
 
