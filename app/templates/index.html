@@ -73,42 +73,36 @@
 
         <!-- Person Table -->
         <div class="table-responsive shadow-sm rounded">
-            <table class="table table-striped table-hover table-sm mb-0 align-middle">
-                <thead class="table-dark">
-                    <tr class="sortable-header">
-                        <th><a href="{{ url_for('main.index', sort_by='givenName', sort_order='desc' if sort_by == 'givenName' and sort_order == 'asc' else 'asc', page=page, page_size=page_size, q=search_query, letter=letter) }}">Given Name {% if sort_by == 'givenName' %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a></th>
-                        <th><a href="{{ url_for('main.index', sort_by='sn', sort_order='desc' if sort_by == 'sn' and sort_order == 'asc' else 'asc', page=page, page_size=page_size, q=search_query, letter=letter) }}">Surname {% if sort_by == 'sn' %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a></th>
-                        <th>Email</th>
-                        <th>Telephone</th>
-                        <th><a href="{{ url_for('main.index', sort_by='o', sort_order='desc' if sort_by == 'o' and sort_order == 'asc' else 'asc', page=page, page_size=page_size, q=search_query, letter=letter) }}">Company {% if sort_by == 'o' %}<span class="sort-indicator">{% if sort_order == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a></th>
-                    </tr>
-                </thead>
+            <table class="table table-hover user-list">
                 <tbody>
                     {% if people %}
                         {% for person in people %}
-                        <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.person_detail', b64_dn=person.dn|b64encode, page=page, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}';">
-                            <td>{{ person.givenName[0] if person.givenName else '' }}</td>
-                            <td><span class="contact-name">{{ person.sn[0] if person.sn else '' }}</span></td>
+                        <tr>
                             <td>
-                                {% if person.mail and person.mail[0] %}
-                                    <a href="mailto:{{ person.mail[0] }}" class="person-meta-link" onclick="event.stopPropagation();">{{ person.mail[0] }}</a>
-                                {% endif %}
+                                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="d-flex align-items-center">
+                                    {% if person.jpegPhoto and person.jpegPhoto[0] %}
+                                        <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo" class="avatar">
+                                    {% else %}
+                                        <div class="avatar d-flex justify-content-center align-items-center bg-secondary text-white">
+                                            <i class="bi bi-person"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <span class="user-link">{{ person.cn[0] if person.cn else 'Unknown' }}</span>
+                                        <span class="user-subhead">{{ person.title[0] if person.title else 'No Title' }}</span>
+                                    </div>
+                                </a>
                             </td>
-                            <td>
-                                {% if person.telephoneNumber and person.telephoneNumber[0] %}
-                                    <a href="callto:{{ person.telephoneNumber[0] }}" class="person-meta-link" onclick="event.stopPropagation();">{{ person.telephoneNumber[0] }}</a>
-                                {% endif %}
-                            </td>
-                            <td>
+                            <td style="width: 20%;">
                                 {% if person.o and person.o[0] %}
-                                    <a href="{{ url_for('main.company_cards', b64_company_name=person.o[0]|b64encode) }}" class="person-meta-link" onclick="event.stopPropagation();">{{ person.o[0] }}</a>
+                                    <a href="{{ url_for('main.company_cards', b64_company_name=person.o[0]|b64encode) }}">{{ person.o[0] }}</a>
                                 {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="5" class="text-center p-4">No persons found.</td>
+                            <td colspan="2" class="text-center p-4">No persons found.</td>
                         </tr>
                     {% endif %}
                 </tbody>
