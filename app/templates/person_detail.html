@@ -3,9 +3,6 @@
 
 {% block content %}
 <div class="card card-margin">
-    <div class="card-header no-border">
-        <h5 class="card-title">{{ person.cn[0] if person.cn else 'Person Details' }}</h5>
-    </div>
     <div class="card-body pt-0">
         <div class="widget-49">
             <div class="widget-49-title-wrapper">
@@ -51,8 +48,58 @@
                 </form>
                 <a href="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" class="btn btn-sm btn-flash-border-primary">Edit</a>
                 {% endif %}
+                <a href="{{ url_for('main.person_vcard', b64_dn=b64_dn) }}" class="btn btn-sm btn-outline-secondary">vCard</a>
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#qrCodeModal" onclick="generateVCardQR()">QR Code</button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="qrCodeModalLabel">Contact QR Code for {{ person.cn[0] if person.cn }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="qrcode" class="d-flex justify-content-center"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+function generateVCardQR() {
+    const person = {{ person|tojson|safe }};
+
+    let vCard = `BEGIN:VCARD
+VERSION:3.0
+FN:${person.cn ? person.cn[0] : ''}
+N:${person.sn ? person.sn[0] : ''};${person.givenName ? person.givenName[0] : ''};;;
+`;
+    if (person.o && person.o[0]) {
+        vCard += `ORG:${person.o[0]}\n`;
+    }
+    if (person.mail && person.mail[0]) {
+        vCard += `EMAIL;TYPE=WORK,INTERNET:${person.mail[0]}\n`;
+    }
+    if (person.telephoneNumber && person.telephoneNumber[0]) {
+        vCard += `TEL;TYPE=WORK,VOICE:${person.telephoneNumber[0]}\n`;
+    }
+    vCard += `END:VCARD`;
+
+    // Clear previous QR code if it exists
+    document.getElementById('qrcode').innerHTML = '';
+
+    new QRCode(document.getElementById('qrcode'), {
+        text: vCard,
+        width: 256,
+        height: 256,
+        correctLevel: QRCode.CorrectLevel.M
+    });
+}
+</script>
 {% endblock %}
