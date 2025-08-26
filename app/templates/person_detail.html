@@ -44,12 +44,20 @@
             <div class="widget-49-meeting-action">
                 {% if not config.READONLY and (current_user.is_admin or current_user.is_editor) %}
                 <form action="{{ url_for('main.delete_person', b64_dn=b64_dn) }}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?');">
-                    <button type="submit" class="btn btn-sm btn-flash-border-danger">Delete</button>
+                    <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete Person">
+                        <i class="bi bi-person-x"></i>
+                    </button>
                 </form>
-                <a href="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" class="btn btn-sm btn-flash-border-primary">Edit</a>
+                <a href="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Edit Person">
+                    <i class="bi bi-pencil-square"></i>
+                </a>
                 {% endif %}
-                <a href="{{ url_for('main.person_vcard', b64_dn=b64_dn) }}" class="btn btn-sm btn-outline-secondary">vCard</a>
-                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#qrCodeModal" onclick="generateVCardQR()">QR Code</button>
+                <a href="{{ url_for('main.person_vcard', b64_dn=b64_dn) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Download vCard">
+                    <i class="bi bi-person-vcard"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#qrCodeModal" onclick="generateVCardQR()" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Show QR Code">
+                    <i class="bi bi-qr-code-scan"></i>
+                </button>
             </div>
         </div>
     </div>
