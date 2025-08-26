@@ -40,7 +40,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#17a2b8" class="bi bi-telephone-fill me-2" viewBox="0 0 16 16">
                               <path fill-rule="evenodd" d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.28 1.465l-2.087 2.086a12.145 12.145 0 0 0 5.073 5.073l2.086-2.087a1.745 1.745 0 0 1 1.465.28l2.292 2.292c.423.329.974.445 1.465.28l.163-.115a1.745 1.745 0 0 1 1.72 2.61l-2.292 2.292a1.745 1.745 0 0 1-2.61.163L1.885.674a.5.5 0 0 1 .163-.727z"/>
                             </svg>
-                            <a href="callto:{{ employee.telephoneNumber[0] }}" class="person-meta-link">{{ employee.telephoneNumber[0] }}</a>
+                            <a href="tel:{{ employee.telephoneNumber[0] }}" class="person-meta-link">{{ employee.telephoneNumber[0] }}</a>
                         </div>
                         {% endif %}
                         {% if employee.mail and employee.mail[0] %}
