@@ -2,79 +2,71 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card shadow-sm">
-    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-        <h1 class="my-2">{{ person.cn[0] if person.cn else 'Person Details' }}</h1>
-        <div>
-            {% if not config.READONLY and (current_user.is_admin or current_user.is_editor) %}
-            <form action="{{ url_for('main.delete_person', b64_dn=b64_dn) }}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?');">
-                <button type="submit" class="btn btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete Person">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-x" viewBox="0 0 16 16">
-                      <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
-                      <path d="M8.256 14a4.474 4.474 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10c.26 0 .507.009.74.025.226-.334.496-.65.804-.918C9.077 9.038 8.564 9 8 9c-5 0-6 3-6 4s1 1 1 1h5.256Z"/>
-                      <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708Z"/>
-                    </svg>
-                </button>
-            </form>
-            <a href="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" class="btn {% if request.endpoint == 'main.edit_person' %}btn-light{% else %}btn-outline-light{% endif %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Edit Person">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.813z"/>
-                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
-                </svg>
-            </a>
-            {% endif %}
-            {% if person.o and person.o[0] %}
-            <a href="{{ url_for('main.company_detail', b64_company_name=person.o[0]|b64encode) }}" class="btn btn-outline-light" data-bs-toggle="tooltip" data-bs-placement="bottom" title="View Company">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-building" viewBox="0 0 16 16">
-                  <path d="M4 2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1ZM4 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM7.5 5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM4.5 8a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Z"/>
-                  <path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V1Zm11 0H3v14h3v-2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V15h3V1Z"/>
-                </svg>
-            </a>
-            {% endif %}
-            <a href="{{ url_for('main.person_vcard', b64_dn=b64_dn) }}" class="btn btn-outline-light" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Download vCard">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-vcard" viewBox="0 0 16 16">
-                  <path d="M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm4-2.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5ZM9 8a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4A.5.5 0 0 1 9 8Zm1 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5Z"/>
-                  <path d="M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H2ZM1 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8.96c.026-.163.04-.33.04-.5C9 10.567 7.21 9 5 9c-2.086 0-3.8 1.398-3.984 3.181A1.006 1.006 0 0 1 1 12V4Z"/>
-                </svg>
-            </a>
-            <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#qrCodeModal" onclick="generateVCardQR()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-qr-code-scan" viewBox="0 0 16 16">
-                  <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5ZM4 4h1v1H4V4Z"/>
-                  <path d="M7 2H2v5h5V2ZM3 3h3v3H3V3Zm2 8.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Zm-2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Zm-2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Z"/>
-                  <path d="M7 9H2v5h5V9Zm-4 1h3v3H3v-3Zm8-6h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm-1 0h1v1h-1V4Zm11-1h1v1h-1V3Zm-1 0h1v1h-1V3Zm-1 0h1v1h-1V3Zm-1 0h1v1h-1V3Zm-1 0h1v1h-1V3Z"/>
-                  <path d="M9 2h5v5H9V2Zm1 1v3h3V3h-3ZM8 8.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Zm2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Zm2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Z"/>
-                  <path d="M9 9h5v5H9V9Zm1 1v3h3v-3h-3Z"/>
-                </svg>
-            </button>
-        </div>
-    </div>
-    <div class="card-body">
-        <dl class="row">
-            {# This loop dynamically displays any attribute from the config map that has a value. #}
-            {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
-                {% if person.get(attr_name) %}
-                    <dt class="col-sm-3" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ attr_name }}">
-                        {{ display_name }}
-                    </dt>
-                    <dd class="col-sm-9">
+<div class="card card-margin">
+    <div class="card-body pt-0">
+        <div class="widget-49">
+            <div class="widget-49-title-wrapper">
+                <div class="widget-49-date-primary">
+                    {% if person.jpegPhoto and person.jpegPhoto[0] %}
+                        <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo">
+                    {% else %}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
+                          <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                        </svg>
+                    {% endif %}
+                </div>
+                <div class="widget-49-meeting-info">
+                    <span class="widget-49-pro-title">{{ person.cn[0] if person.cn else 'Unknown' }}</span>
+                    <span class="widget-49-meeting-time">{{ person.title[0] if person.title else 'No Title' }}</span>
+                </div>
+            </div>
+            <ul class="widget-49-meeting-points">
+                {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
+                    {% if person.get(attr_name) and attr_name not in ['cn', 'title', 'jpegPhoto'] %}
+                    <li class="widget-49-meeting-item">
+                        <span><strong>{{ display_name }}:</strong>
                         {% if attr_name == 'manager' %}
                             {{ manager_name or person[attr_name][0] }}
+                        {% elif attr_name == 'c' and person[attr_name][0] in countries %}
+                            {{ countries[person[attr_name][0]] }}
+                        {% elif attr_name == 'mail' and person[attr_name][0] %}
+                            <a href="mailto:{{ person[attr_name][0] }}">{{ person[attr_name][0] }}</a>
+                        {% elif attr_name == 'telephoneNumber' and person[attr_name][0] %}
+                            <a href="tel:{{ person[attr_name][0] }}">{{ person[attr_name][0] }}</a>
+                        {% elif attr_name == config.LDAP_COMPANY_LINK_ATTRIBUTE and person[attr_name][0] %}
+                            <a href="{{ url_for('main.company_detail', b64_company_name=person[attr_name][0]|b64encode) }}">{{ person[attr_name][0] }}</a>
                         {% else %}
-                            {% set values = person[attr_name] %}
-                            {% if attr_name == 'mail' and values[0] %}
-                                <a href="mailto:{{ values[0] }}">{{ values[0] }}</a>
-                            {% elif attr_name == 'telephoneNumber' and values[0] %}
-                                <a href="callto:{{ values[0] }}">{{ values[0] }}</a>
-                            {% elif attr_name == config.LDAP_COMPANY_LINK_ATTRIBUTE and values[0] %}
-                                <a href="{{ url_for('main.company_detail', b64_company_name=values[0]|b64encode) }}">{{ values[0] }}</a>
-                            {% else %}
-                                {{ values | join(', ') }}
-                            {% endif %}
+                            {{ person[attr_name] | join(', ') }}
                         {% endif %}
-                    </dd>
+                        </span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+            <div class="widget-49-meeting-action">
+                {% if not config.READONLY and (current_user.is_admin or current_user.is_editor) %}
+                <form action="{{ url_for('main.delete_person', b64_dn=b64_dn) }}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete Person">
+                        <i class="bi bi-person-x"></i>
+                    </button>
+                </form>
+                <a href="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Edit Person">
+                    <i class="bi bi-pencil-square"></i>
+                </a>
                 {% endif %}
-            {% endfor %}
-        </dl>
+                {% if person.o and person.o[0] %}
+                <a href="{{ url_for('main.company_cards', b64_company_name=person.o[0]|b64encode) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="View Company">
+                    <i class="bi bi-building"></i>
+                </a>
+                {% endif %}
+                <a href="{{ url_for('main.person_vcard', b64_dn=b64_dn) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Download vCard">
+                    <i class="bi bi-person-vcard"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#qrCodeModal" onclick="generateVCardQR()" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Show QR Code">
+                    <i class="bi bi-qr-code-scan"></i>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
