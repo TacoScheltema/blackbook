@@ -45,6 +45,13 @@ def b64encode_filter(s):
     return base64.urlsafe_b64encode(s).decode("utf-8")
 
 
+def b64encode_photo_filter(b):
+    """Jinja2 filter to base64 encode binary photo data."""
+    if isinstance(b, bytes):
+        return base64.b64encode(b).decode("utf-8")
+    return ""
+
+
 def create_app(config_class=Config):
     """
     The application factory. Follows Flask best practices.
@@ -93,6 +100,7 @@ def create_app(config_class=Config):
 
     # Register custom Jinja2 filter
     app.jinja_env.filters["b64encode"] = b64encode_filter
+    app.jinja_env.filters["b64encode_photo"] = b64encode_photo_filter
 
     # Register blueprints
     from app.auth import bp as auth_bp
