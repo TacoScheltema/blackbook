@@ -30,7 +30,7 @@
             {% if employees %}
                 {% for employee in employees %}
                 <a href="{{ url_for('main.person_detail', b64_dn=employee.dn|b64encode) }}" class="list-group-item list-group-item-action">
-                    <strong>{{ employee.cn[0] if employee.cn else 'Unnamed Person' }}</strong><br>
+                    <span class="contact-name">{{ employee.cn[0] if employee.cn else 'Unnamed Person' }}</span><br>
                     <small class="text-muted">{{ (employee.title[0] if employee.title else 'No Title') }}</small>
                 </a>
                 {% endfor %}

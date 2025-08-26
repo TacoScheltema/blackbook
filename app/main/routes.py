@@ -228,6 +228,7 @@ def company_detail(b64_company_name):
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
     employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
+    employees.sort(key=lambda p: (p.get("sn")[0] if p.get("sn") else "").lower())
 
     return render_template(
         "company_detail.html",
