@@ -25,40 +25,53 @@
         </div>
     </div>
     <div class="card-body">
-        <h5 class="card-title">Employees</h5>
-        <div class="list-group shadow-sm">
-            {% if employees %}
-                {% for employee in employees %}
-                <a href="{{ url_for('main.person_detail', b64_dn=employee.dn|b64encode) }}" class="list-group-item list-group-item-action">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <span class="contact-name">{{ employee.cn[0] if employee.cn else 'Unnamed Person' }}</span><br>
-                            <small class="text-muted">{{ (employee.title[0] if employee.title else 'No Title') }}</small>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            {% if employee.telephoneNumber and employee.telephoneNumber[0] %}
-                            <div class="d-flex align-items-center justify-content-end">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#17a2b8" class="bi bi-telephone-fill me-2" viewBox="0 0 16 16">
-                                  <path fill-rule="evenodd" d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.28 1.465l-2.087 2.086a12.145 12.145 0 0 0 5.073 5.073l2.086-2.087a1.745 1.745 0 0 1 1.465.28l2.292 2.292c.423.329.974.445 1.465.28l.163-.115a1.745 1.745 0 0 1 1.72 2.61l-2.292 2.292a1.745 1.745 0 0 1-2.61.163L1.885.674a.5.5 0 0 1 .163-.727z"/>
-                                </svg>
-                                <a href="tel:{{ employee.telephoneNumber[0] }}" class="person-meta-link">{{ employee.telephoneNumber[0] }}</a>
-                            </div>
-                            {% endif %}
-                            {% if employee.mail and employee.mail[0] %}
-                            <div class="d-flex align-items-center justify-content-end">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#17a2b8" class="bi bi-envelope-fill me-2" viewBox="0 0 16 16">
-                                  <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555zM0 4.697v7.104l5.803-3.558L0 4.697zM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757zm3.436-.586L16 11.803V4.697l-5.803 3.546z"/>
-                                </svg>
-                                <a href="mailto:{{ employee.mail[0] }}" class="person-meta-link">{{ employee.mail[0] }}</a>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </a>
-                {% endfor %}
-            {% else %}
-                <div class="list-group-item">No employees found for this company.</div>
-            {% endif %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <tbody>
+                    {% if employees %}
+                        {% for person in employees %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="user-link">{{ person.cn[0] if person.cn else 'Unknown' }}</a>
+                                <span class="user-subhead">{{ person.title[0] if person.title else 'No Title' }}</span>
+                            </td>
+                            <td>
+                                {% if person.mail and person.mail[0] %}
+                                <a href="mailto:{{ person.mail[0] }}">{{ person.mail[0] }}</a>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if person.telephoneNumber and person.telephoneNumber[0] %}
+                                <a href="tel:{{ person.telephoneNumber[0] }}">{{ person.telephoneNumber[0] }}</a>
+                                {% endif %}
+                            </td>
+                            <td style="width: 20%;">
+                                {% if not config.READONLY and (current_user.is_admin or current_user.is_editor) %}
+                                <a href="{{ url_for('main.edit_person', b64_dn=person.dn|b64encode) }}" class="table-link">
+                                    <span class="fa-stack">
+                                        <i class="fa fa-square fa-stack-2x"></i>
+                                        <i class="fa fa-pencil fa-stack-1x fa-inverse"></i>
+                                    </span>
+                                </a>
+                                <form action="{{ url_for('main.delete_person', b64_dn=person.dn|b64encode) }}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?');">
+                                    <button type="submit" class="table-link danger">
+                                        <span class="fa-stack">
+                                            <i class="fa fa-square fa-stack-2x"></i>
+                                            <i class="fa fa-trash-o fa-stack-1x fa-inverse"></i>
+                                        </span>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center p-4">No employees found for this company.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
