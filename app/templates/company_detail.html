@@ -26,14 +26,25 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover user-list">
                 <tbody>
                     {% if employees %}
                         {% for person in employees %}
                         <tr>
                             <td>
-                                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="user-link">{{ person.cn[0] if person.cn else 'Unknown' }}</a>
-                                <span class="user-subhead">{{ person.title[0] if person.title else 'No Title' }}</span>
+                                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="d-flex align-items-center">
+                                    {% if person.jpegPhoto and person.jpegPhoto[0] %}
+                                        <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo" class="avatar">
+                                    {% else %}
+                                        <div class="avatar d-flex justify-content-center align-items-center bg-secondary text-white">
+                                            <i class="bi bi-person"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <span class="user-link">{{ person.cn[0] if person.cn else 'Unknown' }}</span>
+                                        <span class="user-subhead">{{ person.title[0] if person.title else 'No Title' }}</span>
+                                    </div>
+                                </a>
                             </td>
                             <td>
                                 {% if person.mail and person.mail[0] %}
@@ -45,29 +56,11 @@
                                 <a href="tel:{{ person.telephoneNumber[0] }}">{{ person.telephoneNumber[0] }}</a>
                                 {% endif %}
                             </td>
-                            <td style="width: 20%;">
-                                {% if not config.READONLY and (current_user.is_admin or current_user.is_editor) %}
-                                <a href="{{ url_for('main.edit_person', b64_dn=person.dn|b64encode) }}" class="table-link">
-                                    <span class="fa-stack">
-                                        <i class="fa fa-square fa-stack-2x"></i>
-                                        <i class="fa fa-pencil fa-stack-1x fa-inverse"></i>
-                                    </span>
-                                </a>
-                                <form action="{{ url_for('main.delete_person', b64_dn=person.dn|b64encode) }}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?');">
-                                    <button type="submit" class="table-link danger">
-                                        <span class="fa-stack">
-                                            <i class="fa fa-square fa-stack-2x"></i>
-                                            <i class="fa fa-trash-o fa-stack-1x fa-inverse"></i>
-                                        </span>
-                                    </button>
-                                </form>
-                                {% endif %}
-                            </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="4" class="text-center p-4">No employees found for this company.</td>
+                            <td colspan="3" class="text-center p-4">No employees found for this company.</td>
                         </tr>
                     {% endif %}
                 </tbody>
