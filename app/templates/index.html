@@ -78,7 +78,7 @@
                     {% if people %}
                         {% for person in people %}
                         <tr>
-                            <td>
+                            <td class="align-middle">
                                 <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="d-flex align-items-center">
                                     {% if person.jpegPhoto and person.jpegPhoto[0] %}
                                         <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo" class="avatar">
@@ -92,7 +92,7 @@
                                     </div>
                                 </a>
                             </td>
-                            <td>
+                            <td class="align-middle">
                                 {% if person.mail and person.mail[0] %}
                                 <a href="mailto:{{ person.mail[0] }}" class="d-flex align-items-center">
                                     <i class="bi bi-envelope-fill me-2" style="color: #17a2b8;"></i>
@@ -100,7 +100,7 @@
                                 </a>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="align-middle">
                                 {% if person.telephoneNumber and person.telephoneNumber[0] %}
                                 <a href="tel:{{ person.telephoneNumber[0] }}" class="d-flex align-items-center">
                                     <i class="bi bi-telephone-fill me-2" style="color: #17a2b8;"></i>
@@ -108,7 +108,7 @@
                                 </a>
                                 {% endif %}
                             </td>
-                            <td style="width: 20%;">
+                            <td class="align-middle" style="width: 20%;">
                                 {% if person.o and person.o[0] %}
                                     <a href="{{ url_for('main.company_cards', b64_company_name=person.o[0]|b64encode) }}" class="d-flex align-items-center">
                                         <i class="bi bi-building me-2" style="color: #17a2b8;"></i>
