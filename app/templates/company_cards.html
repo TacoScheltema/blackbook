@@ -50,25 +50,19 @@
                                 <ul class="widget-49-meeting-points">
                                     {% if person.telephoneNumber and person.telephoneNumber[0] %}
                                     <li class="widget-49-meeting-item">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#17a2b8" class="bi bi-telephone-fill" viewBox="0 0 16 16">
-                                          <path fill-rule="evenodd" d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.28 1.465l-2.087 2.086a12.145 12.145 0 0 0 5.073 5.073l2.086-2.087a1.745 1.745 0 0 1 1.465.28l2.292 2.292c.423.329.974.445 1.465.28l.163-.115a1.745 1.745 0 0 1 1.72 2.61l-2.292 2.292a1.745 1.745 0 0 1-2.61.163L1.885.674a.5.5 0 0 1 .163-.727z"/>
-                                        </svg>
+                                        <i class="bi bi-telephone-fill me-2" style="color: #17a2b8;"></i>
                                         <span><a href="tel:{{ person.telephoneNumber[0] }}" class="person-meta-link">{{ person.telephoneNumber[0] }}</a></span>
                                     </li>
                                     {% endif %}
                                     {% if person.mail and person.mail[0] %}
                                     <li class="widget-49-meeting-item">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#17a2b8" class="bi bi-envelope-fill" viewBox="0 0 16 16">
-                                          <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555zM0 4.697v7.104l5.803-3.558L0 4.697zM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.757zm3.436-.586L16 11.803V4.697l-5.803 3.546z"/>
-                                        </svg>
+                                        <i class="bi bi-envelope-fill me-2" style="color: #17a2b8;"></i>
                                         <span><a href="mailto:{{ person.mail[0] }}" class="person-meta-link">{{ person.mail[0] }}</a></span>
                                     </li>
                                     {% endif %}
                                     {% if person.street and person.street[0] %}
                                     <li class="widget-49-meeting-item">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#17a2b8" class="bi bi-geo-alt-fill" viewBox="0 0 16 16">
-                                          <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
-                                        </svg>
+                                        <i class="bi bi-geo-alt-fill me-2" style="color: #17a2b8;"></i>
                                         <span>{{ person.street[0] }}, {{ person.postalCode[0] if person.postalCode }} {{ person.l[0] if person.l }}</span>
                                     </li>
                                     {% endif %}
