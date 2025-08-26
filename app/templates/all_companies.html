@@ -52,7 +52,7 @@
         <tbody>
             {% if companies %}
                 {% for company_name in companies %}
-                <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.company_detail', b64_company_name=company_name|b64encode) }}';">
+                <tr style="cursor: pointer;" onclick="window.location='{{ url_for('main.company_cards', b64_company_name=company_name|b64encode) }}';">
                     <td>{{ company_name }}</td>
                 </tr>
                 {% endfor %}
