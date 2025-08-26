@@ -38,10 +38,10 @@
         <!-- Alphabetical Pager -->
         <nav aria-label="Alphabetical navigation" class="mb-3">
             <ul class="pagination pagination-sm justify-content-center flex-wrap">
-                <li class="page-item {% if not letter %}active{% endif %}"><a class="page-link" href="{{ url_for('main.index', page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}">All</a></li>
+                <li class="page-item {% if not letter %}active{% endif %}"><a class="page-link" href="{{ url_for('main.index', page_size=page_size, q=search_query) }}">All</a></li>
                 {% for char in alphabet %}
                     <li class="page-item {% if letter == char %}active{% endif %}">
-                        <a class="page-link" href="{{ url_for('main.index', letter=char, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order) }}">{{ char }}</a>
+                        <a class="page-link" href="{{ url_for('main.index', letter=char, page_size=page_size, q=search_query) }}">{{ char }}</a>
                     </li>
                 {% endfor %}
             </ul>
@@ -53,19 +53,19 @@
             <ul class="pagination justify-content-center">
                 <!-- Previous Button -->
                 <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('main.index', page=page-1, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order, letter=letter) }}">Previous</a>
+                    <a class="page-link" href="{{ url_for('main.index', page=page-1, page_size=page_size, q=search_query, letter=letter) }}">Previous</a>
                 </li>
 
                 <!-- Page Number Buttons -->
                 {% for p in page_numbers %}
                     <li class="page-item {% if p == page %}active{% endif %}">
-                        <a class="page-link" href="{{ url_for('main.index', page=p, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order, letter=letter) }}">{{ p }}</a>
+                        <a class="page-link" href="{{ url_for('main.index', page=p, page_size=page_size, q=search_query, letter=letter) }}">{{ p }}</a>
                     </li>
                 {% endfor %}
 
                 <!-- Next Button -->
                 <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('main.index', page=page+1, page_size=page_size, q=search_query, sort_by=sort_by, sort_order=sort_order, letter=letter) }}">Next</a>
+                    <a class="page-link" href="{{ url_for('main.index', page=page+1, page_size=page_size, q=search_query, letter=letter) }}">Next</a>
                 </li>
             </ul>
         </nav>
@@ -93,6 +93,16 @@
                                     </div>
                                 </a>
                             </td>
+                            <td>
+                                {% if person.mail and person.mail[0] %}
+                                <a href="mailto:{{ person.mail[0] }}">{{ person.mail[0] }}</a>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if person.telephoneNumber and person.telephoneNumber[0] %}
+                                <a href="tel:{{ person.telephoneNumber[0] }}">{{ person.telephoneNumber[0] }}</a>
+                                {% endif %}
+                            </td>
                             <td style="width: 20%;">
                                 {% if person.o and person.o[0] %}
                                     <a href="{{ url_for('main.company_cards', b64_company_name=person.o[0]|b64encode) }}">{{ person.o[0] }}</a>
@@ -102,7 +112,7 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="2" class="text-center p-4">No persons found.</td>
+                            <td colspan="4" class="text-center p-4">No persons found.</td>
                         </tr>
                     {% endif %}
                 </tbody>
