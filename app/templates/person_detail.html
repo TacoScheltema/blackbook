@@ -27,6 +27,8 @@
                         <span><strong>{{ display_name }}:</strong>
                         {% if attr_name == 'manager' %}
                             {{ manager_name or person[attr_name][0] }}
+                        {% elif attr_name == 'c' and person[attr_name][0] in countries %}
+                            {{ countries[person[attr_name][0]] }}
                         {% elif attr_name == 'mail' and person[attr_name][0] %}
                             <a href="mailto:{{ person[attr_name][0] }}">{{ person[attr_name][0] }}</a>
                         {% elif attr_name == 'telephoneNumber' and person[attr_name][0] %}
