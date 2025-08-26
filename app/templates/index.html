@@ -94,17 +94,26 @@
                             </td>
                             <td>
                                 {% if person.mail and person.mail[0] %}
-                                <a href="mailto:{{ person.mail[0] }}">{{ person.mail[0] }}</a>
+                                <a href="mailto:{{ person.mail[0] }}" class="d-flex align-items-center">
+                                    <i class="bi bi-envelope-fill me-2" style="color: #17a2b8;"></i>
+                                    {{ person.mail[0] }}
+                                </a>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if person.telephoneNumber and person.telephoneNumber[0] %}
-                                <a href="tel:{{ person.telephoneNumber[0] }}">{{ person.telephoneNumber[0] }}</a>
+                                <a href="tel:{{ person.telephoneNumber[0] }}" class="d-flex align-items-center">
+                                    <i class="bi bi-telephone-fill me-2" style="color: #17a2b8;"></i>
+                                    {{ person.telephoneNumber[0] }}
+                                </a>
                                 {% endif %}
                             </td>
                             <td style="width: 20%;">
                                 {% if person.o and person.o[0] %}
-                                    <a href="{{ url_for('main.company_cards', b64_company_name=person.o[0]|b64encode) }}">{{ person.o[0] }}</a>
+                                    <a href="{{ url_for('main.company_cards', b64_company_name=person.o[0]|b64encode) }}" class="d-flex align-items-center">
+                                        <i class="bi bi-building me-2" style="color: #17a2b8;"></i>
+                                        {{ person.o[0] }}
+                                    </a>
                                 {% endif %}
                             </td>
                         </tr>
