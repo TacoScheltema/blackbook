@@ -54,11 +54,6 @@
                     <i class="bi bi-pencil-square"></i>
                 </a>
                 {% endif %}
-                {% if person.o and person.o[0] %}
-                <a href="{{ url_for('main.company_cards', b64_company_name=person.o[0]|b64encode) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="View Company">
-                    <i class="bi bi-building"></i>
-                </a>
-                {% endif %}
                 <a href="{{ url_for('main.person_vcard', b64_dn=b64_dn) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Download vCard">
                     <i class="bi bi-person-vcard"></i>
                 </a>
@@ -88,7 +83,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 function generateVCardQR() {
-    const person = {{ person|tojson|safe }};
+    const person = {{ person_for_json|tojson|safe }};
 
     let vCard = `BEGIN:VCARD
 VERSION:3.0
