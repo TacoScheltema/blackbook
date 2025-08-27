@@ -30,7 +30,7 @@
                 {% for person in employees %}
                 <div class="col-lg-4">
                     <div class="card card-margin">
-                        <div class="card-body pt-0">
+                        <div class="card-body">
                             <div class="widget-49">
                                 <div class="widget-49-title-wrapper">
                                     <div class="widget-49-date-primary">
@@ -68,7 +68,19 @@
                                     {% endif %}
                                 </ul>
                                 <div class="widget-49-meeting-action">
-                                    <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="btn btn-sm btn-flash-border-primary">View Profile</a>
+                                    <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="View Profile">
+                                        <i class="bi bi-person-square"></i>
+                                    </a>
+                                    {% if not config.READONLY and (current_user.is_admin or current_user.is_editor) %}
+                                    <a href="{{ url_for('main.edit_person', b64_dn=person.dn|b64encode) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Edit Person">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <form action="{{ url_for('main.delete_person', b64_dn=person.dn|b64encode) }}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete Person">
+                                            <i class="bi bi-person-x"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

@@ -2,48 +2,119 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card shadow-sm">
-    <div class="card-header bg-dark text-white">
-        <h1 class="my-2">{{ title }}</h1>
-    </div>
+<div class="card card-margin">
     <div class="card-body">
-        <form action="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" method="post">
-            <div class="row">
-                {# Loop through the configured attribute map to dynamically create the form. #}
-                {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
-                <div class="col-md-6 mb-3">
-                    <label for="{{ attr_name }}" class="form-label" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ attr_name }}">
-                        {{ display_name }}
-                    </label>
-
-                    {% if attr_name == 'manager' %}
-                        <select class="form-select" id="manager" name="manager">
-                            <option value="">None</option>
-                            {% for manager in potential_managers %}
-                                <option value="{{ manager.dn }}" {% if person.manager and person.manager[0] == manager.dn %}selected{% endif %}>
-                                    {{ manager.cn[0] }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    {% elif attr_name == 'c' %}
-                        <select class="form-select" id="c" name="c">
-                            <option value="">Select a country</option>
-                            {% for code, name in countries.items()|sort(attribute=1) %}
-                                <option value="{{ code }}" {% if person.c and person.c[0] == code %}selected{% endif %}>{{ name }}</option>
-                            {% endfor %}
-                        </select>
+        <div class="widget-49">
+            <div class="widget-49-title-wrapper">
+                <div class="widget-49-date-primary">
+                    {% if person.jpegPhoto and person.jpegPhoto[0] %}
+                        <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo" id="photo-preview">
                     {% else %}
-                        {% set input_type = 'text' %}
-                        {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
-                        {% if attr_name == 'telephoneNumber' %}{% set input_type = 'tel' %}{% endif %}
-                        <input type="{{ input_type }}" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}" value="{{ (person[attr_name][0] if person.get(attr_name) else '') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16" id="photo-preview">
+                          <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                        </svg>
                     {% endif %}
                 </div>
-                {% endfor %}
+                <div class="widget-49-meeting-info">
+                    <span class="widget-49-pro-title">{{ title }}</span>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-            <a href="{{ url_for('main.person_detail', b64_dn=b64_dn) }}" class="btn btn-secondary">Cancel</a>
-        </form>
+            <form action="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" method="post" id="edit-form">
+                <input type="hidden" name="jpegPhoto" id="jpegPhoto">
+                <div class="row mt-3">
+                    {# Loop through the configured attribute map to dynamically create the form. #}
+                    {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ attr_name }}" class="form-label" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ attr_name }}">
+                            {{ display_name }}
+                        </label>
+
+                        {% if attr_name == 'manager' %}
+                            <select class="form-select" id="manager" name="manager">
+                                <option value="">None</option>
+                                {% for manager in potential_managers %}
+                                    <option value="{{ manager.dn }}" {% if person.manager and person.manager[0] == manager.dn %}selected{% endif %}>
+                                        {{ manager.cn[0] }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        {% elif attr_name == 'c' %}
+                            <select class="form-select" id="c" name="c">
+                                <option value="">Select a country</option>
+                                {% for code, name in countries.items()|sort(attribute=1) %}
+                                    <option value="{{ code }}" {% if person.c and person.c[0] == code %}selected{% endif %}>{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        {% elif attr_name == 'jpegPhoto' %}
+                            <input type="file" class="form-control" id="photo-upload" accept="image/jpeg">
+                        {% else %}
+                            {% set input_type = 'text' %}
+                            {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
+                            {% if attr_name == 'telephoneNumber' %}{% set input_type = 'tel' %}{% endif %}
+                            <input type="{{ input_type }}" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}" value="{{ (person[attr_name][0] if person.get(attr_name) else '') }}">
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="widget-49-meeting-action">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="{{ url_for('main.person_detail', b64_dn=b64_dn) }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+document.getElementById('photo-upload').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file || file.type !== 'image/jpeg' || file.size > 2 * 1024 * 1024) {
+        alert('Please select a JPEG image smaller than 2MB.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Resize the image
+            const MAX_WIDTH = 800;
+            const MAX_HEIGHT = 800;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Compress the image
+            let quality = 0.9;
+            let dataUrl;
+            do {
+                dataUrl = canvas.toDataURL('image/jpeg', quality);
+                quality -= 0.1;
+            } while (dataUrl.length > 200 * 1024 && quality > 0.1);
+
+            document.getElementById('photo-preview').src = dataUrl;
+            document.getElementById('jpegPhoto').value = dataUrl.split(',')[1];
+        }
+        img.src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+});
+</script>
 {% endblock %}

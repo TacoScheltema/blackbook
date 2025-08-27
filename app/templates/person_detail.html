@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="card card-margin">
-    <div class="card-body pt-0">
+    <div class="card-body">
         <div class="widget-49">
             <div class="widget-49-title-wrapper">
                 <div class="widget-49-date-primary">
@@ -88,7 +88,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 function generateVCardQR() {
-    const person = {{ person|tojson|safe }};
+    const person = {{ person_for_json|tojson|safe }};
 
     let vCard = `BEGIN:VCARD
 VERSION:3.0
