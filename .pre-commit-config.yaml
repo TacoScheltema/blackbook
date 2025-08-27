@@ -26,4 +26,4 @@ repos:
     hooks:
     -   id: pylint
         args: [--rcfile=pyproject.toml]
-        additional_dependencies: [flask, python-dotenv, ldap3, gunicorn, Flask-Caching, Flask-Login, Flask-SQLAlchemy, Authlib, Werkzeug, Requests, Flask-Migrate, APScheduler, Flask-Mail]
+        additional_dependencies: [pytest, flask, python-dotenv, ldap3, gunicorn, Flask-Caching, Flask-Login, Flask-SQLAlchemy, Authlib, Werkzeug, Requests, Flask-Migrate, APScheduler, Flask-Mail]

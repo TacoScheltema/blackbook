@@ -101,13 +101,19 @@ def _get_index_request_args():
     default_page_size = get_config("DEFAULT_PAGE_SIZE")
     page_size_from_request = request.args.get("page_size", type=int)
 
-    if page_size_from_request and page_size_from_request in page_size_options:
-        args["page_size"] = page_size_from_request
-        if current_user.page_size != args["page_size"]:
-            current_user.page_size = args["page_size"]
-            db.session.commit()
-    else:
-        args["page_size"] = current_user.page_size or default_page_size
+    page_size = default_page_size
+    if current_user.is_authenticated:
+        if page_size_from_request and page_size_from_request in page_size_options:
+            page_size = page_size_from_request
+            if current_user.page_size != page_size:
+                current_user.page_size = page_size
+                db.session.commit()
+        else:
+            page_size = current_user.page_size or default_page_size
+    elif page_size_from_request and page_size_from_request in page_size_options:
+        page_size = page_size_from_request
+
+    args["page_size"] = page_size
 
     try:
         args["page"] = int(request.args.get("page", 1))

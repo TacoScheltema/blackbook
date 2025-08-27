@@ -16,4 +16,12 @@ disable = [
     "C0415", # import-outside-toplevel
     "R0401", # cyclic-import
     "C0413", # wrong-import-position
+    "W0621", # redefined-outer-name
+]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+filterwarnings = [
+    "ignore:tagMap is deprecated. Please use TAG_MAP instead.:DeprecationWarning:pyasn1",
+    "ignore:typeMap is deprecated. Please use TYPE_MAP instead.:DeprecationWarning:pyasn1",
 ]
