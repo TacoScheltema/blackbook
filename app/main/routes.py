@@ -305,6 +305,13 @@ def person_detail(b64_dn):
         if manager:
             manager_name = manager.get("cn", [None])[0]
 
+    # Make a copy of the person object to avoid modifying the cache
+    person_for_json = person.copy()
+    if "jpegPhoto" in person_for_json and person_for_json["jpegPhoto"]:
+        person_for_json["jpegPhoto"] = [
+            base64.b64encode(p).decode("utf-8") for p in person_for_json["jpegPhoto"]
+        ]
+
     back_params = {
         "page": request.args.get("page"),
         "page_size": request.args.get("page_size"),
@@ -318,6 +325,7 @@ def person_detail(b64_dn):
         "person_detail.html",
         title=person_name,
         person=person,
+        person_for_json=person_for_json,
         b64_dn=b64_dn,
         back_params=back_params,
         manager_name=manager_name,
