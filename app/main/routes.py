@@ -252,11 +252,20 @@ def company_orgchart(b64_company_name):
 
     employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
 
+    employees_for_json = []
+    for employee in employees:
+        employee_copy = employee.copy()
+        if "jpegPhoto" in employee_copy and employee_copy["jpegPhoto"]:
+            employee_copy["jpegPhoto"] = [
+                base64.b64encode(p).decode("utf-8") for p in employee_copy["jpegPhoto"]
+            ]
+        employees_for_json.append(employee_copy)
+
     return render_template(
         "company_orgchart.html",
         title=f"Org Chart: {company_name}",
         company_name=company_name,
-        employees=employees,
+        employees=employees_for_json,
     )
 
 
@@ -305,6 +314,12 @@ def person_detail(b64_dn):
         if manager:
             manager_name = manager.get("cn", [None])[0]
 
+    person_for_json = person.copy()
+    if "jpegPhoto" in person_for_json and person_for_json["jpegPhoto"]:
+        person_for_json["jpegPhoto"] = [
+            base64.b64encode(p).decode("utf-8") for p in person_for_json["jpegPhoto"]
+        ]
+
     back_params = {
         "page": request.args.get("page"),
         "page_size": request.args.get("page_size"),
@@ -318,6 +333,7 @@ def person_detail(b64_dn):
         "person_detail.html",
         title=person_name,
         person=person,
+        person_for_json=person_for_json,
         b64_dn=b64_dn,
         back_params=back_params,
         manager_name=manager_name,
@@ -455,6 +471,10 @@ def edit_person(b64_dn):
                     changes[attr] = [(ldap3.MODIFY_REPLACE, [form_value])]
                 elif not form_value and attr_exists:
                     changes[attr] = [(ldap3.MODIFY_DELETE, [])]
+
+        if "jpegPhoto" in request.form and request.form["jpegPhoto"]:
+            photo_data = base64.b64decode(request.form["jpegPhoto"])
+            changes["jpegPhoto"] = [(ldap3.MODIFY_REPLACE, [photo_data])]
 
         if not changes:
             flash("No changes were submitted.", "info")
