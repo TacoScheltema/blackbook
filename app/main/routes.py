@@ -456,6 +456,10 @@ def edit_person(b64_dn):
                 elif not form_value and attr_exists:
                     changes[attr] = [(ldap3.MODIFY_DELETE, [])]
 
+        if "jpegPhoto" in request.form and request.form["jpegPhoto"]:
+            photo_data = base64.b64decode(request.form["jpegPhoto"])
+            changes["jpegPhoto"] = [(ldap3.MODIFY_REPLACE, [photo_data])]
+
         if not changes:
             flash("No changes were submitted.", "info")
         elif modify_ldap_entry(dn, changes):
