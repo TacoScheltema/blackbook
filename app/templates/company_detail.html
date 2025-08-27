@@ -25,18 +25,52 @@
         </div>
     </div>
     <div class="card-body">
-        <h5 class="card-title">Employees</h5>
-        <div class="list-group shadow-sm">
-            {% if employees %}
-                {% for employee in employees %}
-                <a href="{{ url_for('main.person_detail', b64_dn=employee.dn|b64encode) }}" class="list-group-item list-group-item-action">
-                    <strong>{{ employee.cn[0] if employee.cn else 'Unnamed Person' }}</strong><br>
-                    <small class="text-muted">{{ (employee.title[0] if employee.title else 'No Title') }}</small>
-                </a>
-                {% endfor %}
-            {% else %}
-                <div class="list-group-item">No employees found for this company.</div>
-            {% endif %}
+        <div class="table-responsive">
+            <table class="table table-hover user-list">
+                <tbody>
+                    {% if employees %}
+                        {% for person in employees %}
+                        <tr>
+                            <td class="align-middle">
+                                <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="d-flex align-items-center">
+                                    {% if person.jpegPhoto and person.jpegPhoto[0] %}
+                                        <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo" class="avatar">
+                                    {% else %}
+                                        <div class="avatar d-flex justify-content-center align-items-center bg-secondary text-white">
+                                            <i class="bi bi-person"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <span class="user-link">{{ person.cn[0] if person.cn else 'Unknown' }}</span>
+                                        <span class="user-subhead">{{ person.title[0] if person.title else 'No Title' }}</span>
+                                    </div>
+                                </a>
+                            </td>
+                            <td class="align-middle">
+                                {% if person.mail and person.mail[0] %}
+                                <a href="mailto:{{ person.mail[0] }}" class="d-flex align-items-center">
+                                    <i class="bi bi-envelope-fill me-2" style="color: #17a2b8;"></i>
+                                    {{ person.mail[0] }}
+                                </a>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {% if person.telephoneNumber and person.telephoneNumber[0] %}
+                                <a href="tel:{{ person.telephoneNumber[0] }}" class="d-flex align-items-center">
+                                    <i class="bi bi-telephone-fill me-2" style="color: #17a2b8;"></i>
+                                    {{ person.telephoneNumber[0] }}
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center p-4">No employees found for this company.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
