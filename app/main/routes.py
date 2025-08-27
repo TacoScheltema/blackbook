@@ -252,11 +252,20 @@ def company_orgchart(b64_company_name):
 
     employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
 
+    employees_for_json = []
+    for employee in employees:
+        employee_copy = employee.copy()
+        if "jpegPhoto" in employee_copy and employee_copy["jpegPhoto"]:
+            employee_copy["jpegPhoto"] = [
+                base64.b64encode(p).decode("utf-8") for p in employee_copy["jpegPhoto"]
+            ]
+        employees_for_json.append(employee_copy)
+
     return render_template(
         "company_orgchart.html",
         title=f"Org Chart: {company_name}",
         company_name=company_name,
-        employees=employees,
+        employees=employees_for_json,
     )
 
 
@@ -305,7 +314,6 @@ def person_detail(b64_dn):
         if manager:
             manager_name = manager.get("cn", [None])[0]
 
-    # Make a copy of the person object to avoid modifying the cache
     person_for_json = person.copy()
     if "jpegPhoto" in person_for_json and person_for_json["jpegPhoto"]:
         person_for_json["jpegPhoto"] = [
