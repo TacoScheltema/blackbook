@@ -15,7 +15,7 @@
 import base64
 import math
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 
 import ldap3
@@ -101,13 +101,19 @@ def _get_index_request_args():
     default_page_size = get_config("DEFAULT_PAGE_SIZE")
     page_size_from_request = request.args.get("page_size", type=int)
 
-    if page_size_from_request and page_size_from_request in page_size_options:
-        args["page_size"] = page_size_from_request
-        if current_user.page_size != args["page_size"]:
-            current_user.page_size = args["page_size"]
-            db.session.commit()
-    else:
-        args["page_size"] = current_user.page_size or default_page_size
+    page_size = default_page_size
+    if current_user.is_authenticated:
+        if page_size_from_request and page_size_from_request in page_size_options:
+            page_size = page_size_from_request
+            if current_user.page_size != page_size:
+                current_user.page_size = page_size
+                db.session.commit()
+        else:
+            page_size = current_user.page_size or default_page_size
+    elif page_size_from_request and page_size_from_request in page_size_options:
+        page_size = page_size_from_request
+
+    args["page_size"] = page_size
 
     try:
         args["page"] = int(request.args.get("page", 1))
@@ -538,7 +544,7 @@ def admin_users():
         title="Manage Users",
         local_users=local_users,
         ldap_users=ldap_users,
-        current_time=datetime.utcnow(),
+        current_time=datetime.now(timezone.utc),
     )
 
 
@@ -622,7 +628,7 @@ def delete_user(user_id):
         flash("Cannot delete the primary admin user.", "danger")
         return redirect(url_for("main.admin_users"))
 
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
 
     if user.auth_source == "ldap":
         if not delete_ldap_user(user.username):
@@ -639,7 +645,7 @@ def delete_user(user_id):
 @login_required
 @admin_required
 def force_reset_password(user_id):
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
 
     if not user.email:
         flash(f"Cannot send reset link: User {user.username} has no email address.", "danger")
@@ -659,7 +665,7 @@ def set_roles(user_id):
         flash("Cannot change roles for the primary admin user.", "danger")
         return redirect(url_for("main.admin_users"))
 
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
     user.is_admin = "is_admin" in request.form
     user.is_editor = "is_editor" in request.form
     db.session.commit()
