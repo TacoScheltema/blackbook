@@ -17,6 +17,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app import create_app, db
+from app.models import User
 from config import Config
 
 
@@ -24,7 +25,6 @@ class TestConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
-    LOGIN_DISABLED = True
 
 
 @pytest.fixture
@@ -42,6 +42,36 @@ def app():
 def client(app):
     """A test client for the app."""
     return app.test_client()
+
+
+@pytest.fixture
+def test_user(app):
+    """Create a test user."""
+    user = User(username="testuser", email="test@test.com", is_editor=False)
+    user.set_password("password")
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+
+@pytest.fixture
+def editor_user(app):
+    """Create an editor user."""
+    user = User(username="editoruser", email="editor@test.com", is_editor=True)
+    user.set_password("password")
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+
+@pytest.fixture
+def admin_user(app):
+    """Create an admin user."""
+    user = User(username="adminuser", email="admin@test.com", is_admin=True)
+    user.set_password("password")
+    db.session.add(user)
+    db.session.commit()
+    return user
 
 
 @pytest.fixture

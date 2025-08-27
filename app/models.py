@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import current_app
 from flask_login import UserMixin
@@ -24,7 +24,7 @@ from app import db, login_manager
 
 @login_manager.user_loader
 def load_user(id):
-    return User.query.get(int(id))
+    return db.session.get(User, int(id))
 
 
 class User(UserMixin, db.Model):
@@ -55,7 +55,7 @@ class User(UserMixin, db.Model):
         """Generates a secure token and sets its expiration."""
         self.password_reset_token = secrets.token_urlsafe(24)
         expiration_hours = current_app.config["PASSWORD_RESET_EXPIRATION_HOURS"]
-        self.password_reset_expiration = datetime.utcnow() + timedelta(hours=expiration_hours)
+        self.password_reset_expiration = datetime.now(timezone.utc) + timedelta(hours=expiration_hours)
         db.session.add(self)
         return self.password_reset_token
 
@@ -63,7 +63,7 @@ class User(UserMixin, db.Model):
     def verify_reset_password_token(token):
         """Verifies a token and checks if it has expired."""
         user = User.query.filter_by(password_reset_token=token).first()
-        if user is None or user.password_reset_expiration < datetime.utcnow():
+        if user is None or user.password_reset_expiration < datetime.now(timezone.utc):
             return None
         return user
 
