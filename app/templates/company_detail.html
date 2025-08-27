@@ -31,7 +31,7 @@
                     {% if employees %}
                         {% for person in employees %}
                         <tr>
-                            <td class="align-middle">
+                            <td class="align-middle" style="width: 50%;">
                                 <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="d-flex align-items-center">
                                     {% if person.jpegPhoto and person.jpegPhoto[0] %}
                                         <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo" class="avatar">
