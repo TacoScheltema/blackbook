@@ -25,6 +25,7 @@ class TestConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
+    LDAP_CONTACT_DN_TEMPLATE = "cn={cn},ou=contacts,dc=example,dc=com"
 
 
 @pytest.fixture

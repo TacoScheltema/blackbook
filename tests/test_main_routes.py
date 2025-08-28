@@ -227,9 +227,16 @@ def test_add_person_page_post(client, mocker, editor_user):
         "mail": "new@example.com",
     }
 
-    response = client.post("/person/add", data=form_data, follow_redirects=True)
-    assert response.status_code == 200
-    assert b"Contact added successfully!" in response.data
+    response = client.post("/person/add", data=form_data)
+    assert response.status_code == 302
+
+    with client.session_transaction() as session:
+        flashes = session.get("_flashes", [])
+        assert len(flashes) > 0
+        category, message = flashes[0]
+        assert category == "success"
+        assert "Contact added successfully!" in message
+
     mock_add_ldap_entry.assert_called_once()
     mock_scheduler_add_job.assert_called_once()
 
