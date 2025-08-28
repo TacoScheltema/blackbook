@@ -17,6 +17,7 @@ image: python:3.11
 
 stages:
   - lint
+  - test
 
 before_script:
   - pip install -r requirements.txt
@@ -41,4 +42,9 @@ pylint:
   stage: lint
   script:
     # We specify the rcfile to ensure pylint picks up our configuration
-    - pylint --rcfile=pyproject.toml app/
+    - pylint --rcfile=pyproject.toml app/ tests/
+
+pytest:
+  stage: test
+  script:
+    - pytest

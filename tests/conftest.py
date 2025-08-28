@@ -26,6 +26,8 @@ class TestConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
     LDAP_CONTACT_DN_TEMPLATE = "cn={cn},ou=contacts,dc=example,dc=com"
+    GOOGLE_CLIENT_ID = "test"
+    GOOGLE_CLIENT_SECRET = "test"
 
 
 @pytest.fixture
