@@ -14,7 +14,6 @@
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 import hashlib
 import random
-from io import StringIO
 
 import svgwrite
 
@@ -24,10 +23,6 @@ import svgwrite
 
 # Color Palettes
 VEHICLE_COLORS = [
-    "#d25959",
-    "#2d5f75",
-    "#3f704d",
-    "#a36d4f",
     "#6c5b7b",
     "#ffcc00",
     "#767478",
@@ -50,11 +45,17 @@ VEHICLE_COLORS = [
     "#a1887f",
     "#e0e0e0",
     "#90a4ae",
+    "#f67280",
+    "#c06c84",
+    "#6c5b7b",
+    "#355c7d",
+    "#99b898",
+    "#feceab",
+    "#ff847c",
+    "#e84a5f",
+    "#2a363b",
 ]
 BACKGROUND_COLORS = [
-    "#f0f0f0",
-    "#d8e2dc",
-    "#a0c8d1",
     "#e0e4f2",
     "#c9ddff",
     "#f2e2d8",
@@ -75,11 +76,23 @@ BACKGROUND_COLORS = [
     "#ffccbc",
     "#d7ccc8",
     "#cfd8dc",
+    "#f8b195",
+    "#f67280",
+    "#c06c84",
+    "#ece5ce",
+    "#d5e1df",
+    "#e3d3e4",
 ]
 
+
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-# Vehicle Drawing Functions: Each function draws a specific vehicle
+# Helper Drawing Functions
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+def draw_background(dwg, seed):
+    """Draws a simple background color."""
+    random.seed(seed)
+    color = random.choice(BACKGROUND_COLORS)
+    dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), fill=color))
 
 
 def draw_classic_car(dwg, colors):
@@ -195,13 +208,6 @@ def draw_helicopter(dwg, colors):
     dwg.add(vehicle)
 
 
-def draw_background(dwg, seed):
-    """Draws a simple background."""
-    random.seed(seed)
-    color = random.choice(BACKGROUND_COLORS)
-    dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), fill=color))
-
-
 # A dictionary to easily access the drawing functions
 VEHICLE_TYPES = {
     "classic_car": draw_classic_car,
@@ -213,41 +219,43 @@ VEHICLE_TYPES = {
     "helicopter": draw_helicopter,
 }
 
+
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 # Main Generator Function
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-def generate_vehicle_avatar(vehicle_type="random", seed=None):
+def generate_vehicle_avatar(seed=None):
     """
     Generates a complete SVG vehicle avatar and returns it as a string.
-    """
-    if vehicle_type not in VEHICLE_TYPES and vehicle_type != "random":
-        vehicle_type = "random"
 
+    Args:
+        seed (str or int): An optional seed for the random number generator
+                           to create deterministic avatars.
+    """
     if seed is None:
         seed = random.randint(0, 1000000)
 
     def part_seed(part_name):
         return int(hashlib.sha256(f"{seed}-{part_name}".encode("utf-8")).hexdigest(), 16)
 
-    if vehicle_type == "random":
-        random.seed(part_seed("vehicle_type"))
-        vehicle_type = random.choice(list(VEHICLE_TYPES.keys()))
+    # Deterministically choose vehicle type based on seed
+    random.seed(part_seed("vehicle_type"))
+    vehicle_type = random.choice(list(VEHICLE_TYPES.keys()))
 
-    # Use an in-memory string buffer
-    svg_io = StringIO()
-    dwg = svgwrite.Drawing(fileobj=svg_io, size=("200px", "200px"), viewBox="0 0 100 100")
+    # Setup the SVG canvas for in-memory generation
+    dwg = svgwrite.Drawing(profile="tiny", size=("200px", "200px"), viewBox="0 0 100 100")
 
     # --- Drawing Order ---
     draw_background(dwg, part_seed("background"))
 
+    # Get the drawing function for the chosen vehicle
     draw_func = VEHICLE_TYPES[vehicle_type]
 
+    # Choose two distinct colors for the vehicle
+    random.seed(part_seed("colors"))
     colors = random.sample(VEHICLE_COLORS, 2)
 
+    # Draw the vehicle
     draw_func(dwg, colors)
 
-    # Get the SVG content from the buffer
-    dwg.save()
-    return svg_io.getvalue()
+    # Return the SVG content as a string
+    return dwg.tostring()
