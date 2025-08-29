@@ -34,6 +34,7 @@ from app.ldap_utils import (
     modify_ldap_entry,
 )
 from app.main import bp
+from app.main.avatars import generate_vehicle_avatar
 from app.main.countries import countries
 from app.models import User
 
@@ -434,7 +435,10 @@ def add_person():
         return redirect(url_for("main.add_person"))
 
     return render_template(
-        "add_person.html", title="Add New Contact", company_employees=company_employees, countries=countries
+        "add_person.html",
+        title="Add New Contact",
+        company_employees=company_employees,
+        countries=countries,
     )
 
 
@@ -528,6 +532,13 @@ def delete_person(b64_dn):
         flash("Failed to delete contact.", "danger")
 
     return redirect(url_for("main.index"))
+
+
+@bp.route("/avatar/<seed>.svg")
+def avatar(seed):
+    """Generates and returns a vehicle avatar SVG."""
+    svg_data = generate_vehicle_avatar(seed=seed)
+    return Response(svg_data, mimetype="image/svg+xml")
 
 
 # --- Admin Routes ---
