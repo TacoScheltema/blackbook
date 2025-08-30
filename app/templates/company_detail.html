@@ -35,6 +35,8 @@
                                 <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="d-flex align-items-center">
                                     {% if person.jpegPhoto and person.jpegPhoto[0] %}
                                         <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo" class="avatar">
+                                    {% elif config.ENABLE_GENERATED_AVATARS %}
+                                        <img src="{{ url_for('main.avatar', seed=person.dn) }}" alt="Generated Avatar" class="avatar">
                                     {% else %}
                                         <div class="avatar d-flex justify-content-center align-items-center bg-secondary text-white">
                                             <i class="bi bi-person"></i>
