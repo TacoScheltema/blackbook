@@ -185,11 +185,7 @@ def all_companies():
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
     company_names = sorted(
-        list(
-            set(
-                p[company_link_attr][0] for p in all_people if p.get(company_link_attr) and p[company_link_attr]
-            )
-        )
+        list(set(p[company_link_attr][0] for p in all_people if p.get(company_link_attr) and p[company_link_attr]))
     )
 
     if letter:
@@ -263,9 +259,7 @@ def company_orgchart(b64_company_name):
     for employee in employees:
         employee_copy = employee.copy()
         if "jpegPhoto" in employee_copy and employee_copy["jpegPhoto"]:
-            employee_copy["jpegPhoto"] = [
-                base64.b64encode(p).decode("utf-8") for p in employee_copy["jpegPhoto"]
-            ]
+            employee_copy["jpegPhoto"] = [base64.b64encode(p).decode("utf-8") for p in employee_copy["jpegPhoto"]]
         employees_for_json.append(employee_copy)
 
     return render_template(
@@ -323,9 +317,7 @@ def person_detail(b64_dn):
 
     person_for_json = person.copy()
     if "jpegPhoto" in person_for_json and person_for_json["jpegPhoto"]:
-        person_for_json["jpegPhoto"] = [
-            base64.b64encode(p).decode("utf-8") for p in person_for_json["jpegPhoto"]
-        ]
+        person_for_json["jpegPhoto"] = [base64.b64encode(p).decode("utf-8") for p in person_for_json["jpegPhoto"]]
 
     back_params = {
         "page": request.args.get("page"),
@@ -403,9 +395,7 @@ def add_person():
 
     if request.method == "POST":
         attributes = {
-            attr: request.form.get(attr)
-            for attr in get_config("LDAP_PERSON_ATTRIBUTES")
-            if request.form.get(attr)
+            attr: request.form.get(attr) for attr in get_config("LDAP_PERSON_ATTRIBUTES") if request.form.get(attr)
         }
 
         if not attributes.get("cn"):

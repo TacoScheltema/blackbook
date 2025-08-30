@@ -38,9 +38,7 @@ class Config:
     LDAP_BIND_PASSWORD = os.environ.get("LDAP_BIND_PASSWORD", "admin")
     LDAP_BASE_DN = os.environ.get("LDAP_BASE_DN", "dc=example,dc=com")
     LDAP_USER_DN_TEMPLATE = os.environ.get("LDAP_USER_DN_TEMPLATE", "uid={username},ou=users,dc=example,dc=com")
-    LDAP_CONTACT_DN_TEMPLATE = os.environ.get(
-        "LDAP_CONTACT_DN_TEMPLATE", "cn={cn},ou=contacts,dc=example,dc=com"
-    )
+    LDAP_CONTACT_DN_TEMPLATE = os.environ.get("LDAP_CONTACT_DN_TEMPLATE", "cn={cn},ou=contacts,dc=example,dc=com")
     LDAP_USE_SSL = os.environ.get("LDAP_USE_SSL", "False").lower() in ("true", "1", "t")
 
     # Filter to apply when searching for contacts
