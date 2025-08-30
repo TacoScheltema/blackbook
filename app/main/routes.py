@@ -34,7 +34,7 @@ from app.ldap_utils import (
     modify_ldap_entry,
 )
 from app.main import bp
-from app.main.avatars import generate_vehicle_avatar
+from app.main.avatar_generator import generate_avatar
 from app.main.countries import countries
 from app.models import User
 
@@ -536,8 +536,9 @@ def delete_person(b64_dn):
 
 @bp.route("/avatar/<seed>.svg")
 def avatar(seed):
-    """Generates and returns a vehicle avatar SVG."""
-    svg_data = generate_vehicle_avatar(seed=seed)
+    """Generates and returns an avatar SVG."""
+    theme = get_config("AVATAR_THEME")
+    svg_data = generate_avatar(seed=seed, theme=theme)
     return Response(svg_data, mimetype="image/svg+xml")
 
 
@@ -663,7 +664,7 @@ def force_reset_password(user_id):
         return redirect(url_for("main.admin_users"))
 
     send_password_reset_email(user)
-    db.session.commit()  # The token is saved in the send_password_reset_email function
+    db.session.commit()
     flash(f"A password reset link has been sent to {user.email}.", "info")
     return redirect(url_for("main.admin_users"))
 

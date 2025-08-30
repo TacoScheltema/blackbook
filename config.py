@@ -13,139 +13,96 @@
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 import os
-from collections import OrderedDict
 
 from dotenv import load_dotenv
 
-# Load environment variables from a .env file
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, ".env"))
 
 
 class Config:
-    """
-    Main configuration class.
+    """Base config."""
 
-    Loads settings from environment variables for security and flexibility.
-    """
-
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "a-very-secret-key-that-you-should-change"
+    SECRET_KEY = os.environ.get("SECRET_KEY", "you-will-never-guess")
     FLASK_DEBUG = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
-    READONLY = os.environ.get("READONLY", "False").lower() in ("true", "1", "t")
-    APP_TITLE = os.environ.get("APP_TITLE") or "LDAP Address Book"
-    ENABLE_GENERATED_AVATARS = os.environ.get("ENABLE_GENERATED_AVATARS", "False").lower() in ("true", "1", "t")
-
-    # --- Authentication Method Toggles ---
-    ENABLE_LOCAL_LOGIN = os.environ.get("ENABLE_LOCAL_LOGIN", "True").lower() in ("true", "1", "t")
-    ENABLE_LDAP_LOGIN = os.environ.get("ENABLE_LDAP_LOGIN", "True").lower() in ("true", "1", "t")
-
-    # --- Database Configuration ---
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or "sqlite:///" + os.path.join(basedir, "app.db")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///" + os.path.join(basedir, "app.db"))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    # --- Caching Configuration ---
-    CACHE_TYPE = "SimpleCache"
-    CACHE_DEFAULT_TIMEOUT = int(os.environ.get("LDAP_CACHE_TIMEOUT", 300))
-    CACHE_REFRESH_INTERVAL = int(os.environ.get("CACHE_REFRESH_INTERVAL", 300))
-
-    # --- Email Server Configuration ---
-    MAIL_SERVER = os.environ.get("MAIL_SERVER")
-    MAIL_PORT = int(os.environ.get("MAIL_PORT") or 25)
-    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS") is not None
-    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
-    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    MAIL_FROM_ADDRESS = os.environ.get("MAIL_FROM_ADDRESS")
-
-    # --- Password Reset ---
-    PASSWORD_RESET_EXPIRATION_HOURS = int(os.environ.get("PASSWORD_RESET_EXPIRATION_HOURS", 24))
+    READONLY = os.environ.get("READONLY", "False").lower() in ("true", "1", "t")
+    APP_TITLE = os.environ.get("APP_TITLE", "LDAP Address Book")
 
     # --- LDAP Configuration ---
-    LDAP_SERVER = os.environ.get("LDAP_SERVER")
-    LDAP_BASE_DN = os.environ.get("LDAP_BASE_DN")
-    LDAP_BIND_DN = os.environ.get("LDAP_BIND_DN")
-    LDAP_BIND_PASSWORD = os.environ.get("LDAP_BIND_PASSWORD")
+    # The user for binding must have read access to the directory.
+    # Write access is required for add/edit/delete features.
+    LDAP_SERVER = os.environ.get("LDAP_SERVER", "ldap://localhost:389")
+    LDAP_BIND_DN = os.environ.get("LDAP_BIND_DN", "cn=admin,dc=example,dc=com")
+    LDAP_BIND_PASSWORD = os.environ.get("LDAP_BIND_PASSWORD", "admin")
+    LDAP_BASE_DN = os.environ.get("LDAP_BASE_DN", "dc=example,dc=com")
+    LDAP_USER_DN_TEMPLATE = os.environ.get("LDAP_USER_DN_TEMPLATE", "uid={username},ou=users,dc=example,dc=com")
+    LDAP_CONTACT_DN_TEMPLATE = os.environ.get(
+        "LDAP_CONTACT_DN_TEMPLATE", "cn={cn},ou=contacts,dc=example,dc=com"
+    )
     LDAP_USE_SSL = os.environ.get("LDAP_USE_SSL", "False").lower() in ("true", "1", "t")
-    LDAP_USER_DN_TEMPLATE = os.environ.get("LDAP_USER_DN_TEMPLATE")
+
+    # Filter to apply when searching for contacts
+    ADDRESSBOOK_FILTER = os.environ.get("ADDRESSBOOK_FILTER")
+    LDAP_CONTACTS_DN = ADDRESSBOOK_FILTER if ADDRESSBOOK_FILTER else LDAP_BASE_DN
+
+    # Define the objectClass for a person entry in LDAP.
+    # For Active Directory, this is often just 'user'.
+    # For OpenLDAP, 'inetOrgPerson' is common.
+    LDAP_PERSON_OBJECT_CLASS = os.environ.get("LDAP_PERSON_OBJECT_CLASS", "inetOrgPerson")
+    LDAP_COMPANY_LINK_ATTRIBUTE = os.environ.get("LDAP_COMPANY_LINK_ATTRIBUTE", "o")
+
+    # Map technical LDAP attribute names to human-readable names.
+    # This also controls which attributes are displayed and editable.
+    LDAP_ATTRIBUTE_MAP_STR = os.environ.get(
+        "LDAP_ATTRIBUTE_MAP",
+        "cn:Full Name,sn:Surname,givenName:Given Name,mail:Email,"
+        "telephoneNumber:Phone,o:Company,title:Title,street:Street,"
+        "l:City,postalCode:Postal Code,c:Country,manager:Manager,jpegPhoto:Photo",
+    )
+    LDAP_ATTRIBUTE_MAP = dict(item.split(":") for item in LDAP_ATTRIBUTE_MAP_STR.split(","))
+    LDAP_PERSON_ATTRIBUTES = list(LDAP_ATTRIBUTE_MAP.keys())
+
+    # --- Authentication Configuration ---
+    ENABLE_LOCAL_LOGIN = os.environ.get("ENABLE_LOCAL_LOGIN", "True").lower() in ("true", "1", "t")
+    ENABLE_LDAP_LOGIN = os.environ.get("ENABLE_LDAP_LOGIN", "True").lower() in ("true", "1", "t")
     LDAP_ADMIN_GROUP_DN = os.environ.get("LDAP_ADMIN_GROUP_DN")
     LDAP_EDITOR_GROUP_DN = os.environ.get("LDAP_EDITOR_GROUP_DN")
-    LDAP_CONTACT_DN_TEMPLATE = os.environ.get("LDAP_CONTACT_DN_TEMPLATE")
 
-    # --- Contact Filter ---
-    LDAP_CONTACTS_DN = os.environ.get("ADDRESSBOOK_FILTER") or LDAP_BASE_DN
-
-    # --- SSO/OAuth Configuration ---
+    # --- SSO Provider Configuration ---
+    # Google
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
     GOOGLE_ADMIN_GROUP = os.environ.get("GOOGLE_ADMIN_GROUP")
     GOOGLE_EDITOR_GROUP = os.environ.get("GOOGLE_EDITOR_GROUP")
 
+    # Keycloak
     KEYCLOAK_CLIENT_ID = os.environ.get("KEYCLOAK_CLIENT_ID")
     KEYCLOAK_CLIENT_SECRET = os.environ.get("KEYCLOAK_CLIENT_SECRET")
     KEYCLOAK_SERVER_URL = os.environ.get("KEYCLOAK_SERVER_URL")
     KEYCLOAK_ADMIN_GROUP = os.environ.get("KEYCLOAK_ADMIN_GROUP")
     KEYCLOAK_EDITOR_GROUP = os.environ.get("KEYCLOAK_EDITOR_GROUP")
 
+    # Authentik
     AUTHENTIK_CLIENT_ID = os.environ.get("AUTHENTIK_CLIENT_ID")
     AUTHENTIK_CLIENT_SECRET = os.environ.get("AUTHENTIK_CLIENT_SECRET")
     AUTHENTIK_SERVER_URL = os.environ.get("AUTHENTIK_SERVER_URL")
     AUTHENTIK_ADMIN_GROUP = os.environ.get("AUTHENTIK_ADMIN_GROUP")
     AUTHENTIK_EDITOR_GROUP = os.environ.get("AUTHENTIK_EDITOR_GROUP")
 
-    # --- ObjectClass Configuration ---
-    LDAP_PERSON_OBJECT_CLASS = os.environ.get("LDAP_PERSON_OBJECT_CLASS", "inetOrgPerson")
-    LDAP_COMPANY_LINK_ATTRIBUTE = os.environ.get("LDAP_COMPANY_LINK_ATTRIBUTE", "o")
+    # --- Caching Configuration ---
+    CACHE_TYPE = "SimpleCache"
+    CACHE_DEFAULT_TIMEOUT = int(os.environ.get("CACHE_DEFAULT_TIMEOUT", 300))
+    CACHE_REFRESH_INTERVAL = int(os.environ.get("CACHE_REFRESH_INTERVAL", 300))
 
-    # --- Attribute Configuration ---
-    LDAP_ATTRIBUTE_MAP_STR = os.environ.get("LDAP_ATTRIBUTE_MAP")
-    if LDAP_ATTRIBUTE_MAP_STR:
-        try:
-            LDAP_ATTRIBUTE_MAP = OrderedDict(
-                (pair.split(":")[0].strip(), pair.split(":")[1].strip())
-                for pair in LDAP_ATTRIBUTE_MAP_STR.split(",")
-            )
-        except IndexError:
-            print("WARNING: LDAP_ATTRIBUTE_MAP is malformed. Using default.")
-            LDAP_ATTRIBUTE_MAP = OrderedDict()
-    else:
-        LDAP_ATTRIBUTE_MAP = OrderedDict()
-
-    if not LDAP_ATTRIBUTE_MAP:
-        LDAP_ATTRIBUTE_MAP = OrderedDict(
-            [
-                ("cn", "Full Name"),
-                ("givenName", "Given Name"),
-                ("sn", "Surname"),
-                ("mail", "Email"),
-                ("telephoneNumber", "Telephone"),
-                ("o", "Company"),
-                ("street", "Street"),
-                ("l", "City"),
-                ("postalCode", "Postal Code"),
-            ]
-        )
-
-    LDAP_PERSON_ATTRIBUTES = list(LDAP_ATTRIBUTE_MAP.keys())
-
-    # --- Company Attribute Configuration ---
-    LDAP_COMPANY_ATTRIBUTE_MAP_STR = os.environ.get("LDAP_COMPANY_ATTRIBUTE_MAP")
-    if LDAP_COMPANY_ATTRIBUTE_MAP_STR:
-        try:
-            LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict(
-                (pair.split(":")[0].strip(), pair.split(":")[1].strip())
-                for pair in LDAP_COMPANY_ATTRIBUTE_MAP_STR.split(",")
-            )
-        except IndexError:
-            print("WARNING: LDAP_COMPANY_ATTRIBUTE_MAP is malformed. Using default.")
-            LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict()
-    else:
-        LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict()
-
-    if not LDAP_COMPANY_ATTRIBUTE_MAP:
-        LDAP_COMPANY_ATTRIBUTE_MAP = OrderedDict(
-            [("o", "Company"), ("street", "Street"), ("postalCode", "Postcode"), ("l", "City")]
-        )
-
-    LDAP_COMPANY_ATTRIBUTES = list(LDAP_COMPANY_ATTRIBUTE_MAP.keys())
+    # --- Avatar Generation ---
+    ENABLE_GENERATED_AVATARS = os.environ.get("ENABLE_GENERATED_AVATARS", "False").lower() in (
+        "true",
+        "1",
+        "t",
+    )
+    AVATAR_THEME = os.environ.get("AVATAR_THEME", "all")
 
     # --- Pagination Configuration ---
     PAGE_SIZE_OPTIONS_STR = os.environ.get("PAGE_SIZE_OPTIONS", "20,30,50")
@@ -156,3 +113,12 @@ class Config:
         PAGE_SIZE_OPTIONS = [20, 30, 50]
 
     DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0] if PAGE_SIZE_OPTIONS else 20
+
+    # --- Mail Server Configuration ---
+    MAIL_SERVER = os.environ.get("MAIL_SERVER")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", 25))
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS") is not None
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    MAIL_FROM_ADDRESS = os.environ.get("MAIL_FROM_ADDRESS", "no-reply@localhost")
+    PASSWORD_RESET_EXPIRATION_HOURS = int(os.environ.get("PASSWORD_RESET_EXPIRATION_HOURS", 24))
