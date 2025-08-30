@@ -34,6 +34,7 @@ from app.ldap_utils import (
     modify_ldap_entry,
 )
 from app.main import bp
+from app.main.avatar_generator import generate_avatar
 from app.main.countries import countries
 from app.models import User
 
@@ -184,11 +185,7 @@ def all_companies():
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
     company_names = sorted(
-        list(
-            set(
-                p[company_link_attr][0] for p in all_people if p.get(company_link_attr) and p[company_link_attr]
-            )
-        )
+        list(set(p[company_link_attr][0] for p in all_people if p.get(company_link_attr) and p[company_link_attr]))
     )
 
     if letter:
@@ -262,9 +259,7 @@ def company_orgchart(b64_company_name):
     for employee in employees:
         employee_copy = employee.copy()
         if "jpegPhoto" in employee_copy and employee_copy["jpegPhoto"]:
-            employee_copy["jpegPhoto"] = [
-                base64.b64encode(p).decode("utf-8") for p in employee_copy["jpegPhoto"]
-            ]
+            employee_copy["jpegPhoto"] = [base64.b64encode(p).decode("utf-8") for p in employee_copy["jpegPhoto"]]
         employees_for_json.append(employee_copy)
 
     return render_template(
@@ -322,9 +317,7 @@ def person_detail(b64_dn):
 
     person_for_json = person.copy()
     if "jpegPhoto" in person_for_json and person_for_json["jpegPhoto"]:
-        person_for_json["jpegPhoto"] = [
-            base64.b64encode(p).decode("utf-8") for p in person_for_json["jpegPhoto"]
-        ]
+        person_for_json["jpegPhoto"] = [base64.b64encode(p).decode("utf-8") for p in person_for_json["jpegPhoto"]]
 
     back_params = {
         "page": request.args.get("page"),
@@ -402,9 +395,7 @@ def add_person():
 
     if request.method == "POST":
         attributes = {
-            attr: request.form.get(attr)
-            for attr in get_config("LDAP_PERSON_ATTRIBUTES")
-            if request.form.get(attr)
+            attr: request.form.get(attr) for attr in get_config("LDAP_PERSON_ATTRIBUTES") if request.form.get(attr)
         }
 
         if not attributes.get("cn"):
@@ -434,7 +425,10 @@ def add_person():
         return redirect(url_for("main.add_person"))
 
     return render_template(
-        "add_person.html", title="Add New Contact", company_employees=company_employees, countries=countries
+        "add_person.html",
+        title="Add New Contact",
+        company_employees=company_employees,
+        countries=countries,
     )
 
 
@@ -528,6 +522,14 @@ def delete_person(b64_dn):
         flash("Failed to delete contact.", "danger")
 
     return redirect(url_for("main.index"))
+
+
+@bp.route("/avatar/<seed>.svg")
+def avatar(seed):
+    """Generates and returns an avatar SVG."""
+    theme = get_config("AVATAR_THEME")
+    svg_data = generate_avatar(seed=seed, theme=theme)
+    return Response(svg_data, mimetype="image/svg+xml")
 
 
 # --- Admin Routes ---
@@ -652,7 +654,7 @@ def force_reset_password(user_id):
         return redirect(url_for("main.admin_users"))
 
     send_password_reset_email(user)
-    db.session.commit()  # The token is saved in the send_password_reset_email function
+    db.session.commit()
     flash(f"A password reset link has been sent to {user.email}.", "info")
     return redirect(url_for("main.admin_users"))
 

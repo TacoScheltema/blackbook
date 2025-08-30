@@ -43,7 +43,7 @@ class User(UserMixin, db.Model):
 
     # New fields for password reset tokens
     password_reset_token = db.Column(db.String(32), index=True, unique=True)
-    password_reset_expiration = db.Column(db.DateTime)
+    password_reset_expiration = db.Column(db.DateTime(timezone=True))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

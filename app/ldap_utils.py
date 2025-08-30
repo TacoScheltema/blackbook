@@ -44,9 +44,7 @@ def get_ldap_connection(user_dn=None, password=None, read_only=False):
 
     try:
         server = ldap3.Server(server_uri, get_info=ldap3.ALL, use_ssl=use_ssl)
-        connection = ldap3.Connection(
-            server, user=user_dn, password=password, auto_bind=True, read_only=read_only
-        )
+        connection = ldap3.Connection(server, user=user_dn, password=password, auto_bind=True, read_only=read_only)
         return connection
     except LDAPException as e:
         print(f"Failed to connect or bind to LDAP server: {e}")
@@ -199,9 +197,7 @@ def search_ldap(filter_str, attributes, size_limit=0, search_base=None):
         search_base = current_app.config["LDAP_BASE_DN"]
 
     try:
-        conn.search(
-            search_base=search_base, search_filter=filter_str, attributes=attributes, size_limit=size_limit
-        )
+        conn.search(search_base=search_base, search_filter=filter_str, attributes=attributes, size_limit=size_limit)
         results = []
         for entry in conn.entries:
             result_dict = {"dn": entry.entry_dn}
@@ -228,9 +224,7 @@ def get_entry_by_dn(dn, attributes):
         return None
 
     try:
-        conn.search(
-            search_base=dn, search_filter="(objectClass=*)", search_scope=ldap3.BASE, attributes=attributes
-        )
+        conn.search(search_base=dn, search_filter="(objectClass=*)", search_scope=ldap3.BASE, attributes=attributes)
         if conn.entries:
             entry = conn.entries[0]
             result_dict = {"dn": entry.entry_dn}

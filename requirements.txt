@@ -14,3 +14,4 @@ Requests
 Flask-Migrate
 APScheduler
 Flask-Mail
+svgwrite
