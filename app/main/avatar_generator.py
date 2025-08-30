@@ -123,18 +123,70 @@ def draw_motorbike(dwg, colors):
 
 
 def draw_bicycle(dwg, colors):
-    """Draws a flat, side-view of a bicycle."""
-    primary, _ = colors
-    vehicle = dwg.g(
-        stroke="#1E1E1E", stroke_width=2, fill="none", stroke_linejoin="round", stroke_linecap="round"
+    """Draws a stylized bicycle from an SVG path."""
+    primary, secondary = colors
+    bicycle = dwg.g(stroke_width=0)
+    bicycle.add(
+        dwg.path(
+            d="M510.2 505m-475.7 0a475.7 475.7 0 1 0 951.4 0 475.7 475.7 0 1 0-951.4 0Z",
+            fill=secondary,
+        )
     )
-    vehicle.add(dwg.circle(center=(25, 65), r=12))
-    vehicle.add(dwg.circle(center=(75, 65), r=12))
-    vehicle.add(dwg.path(d="M 25 65 L 45 40 L 75 65 L 50 65 L 45 40", stroke=primary))
-    vehicle.add(dwg.line(start=(45, 40), end=(40, 30)))
-    vehicle.add(dwg.line(start=(68, 48), end=(75, 65)))
-    vehicle.add(dwg.line(start=(65, 45), end=(70, 45)))
-    dwg.add(vehicle)
+    bicycle.add(
+        dwg.path(
+            d="M177.6 755m-157.9 0a157.9 157.9 0 1 0 315.8 0 157.9 157.9 0 1 0-315.8 0Z",
+            fill=primary,
+        )
+    )
+    bicycle.add(
+        dwg.path(
+            d=(
+                "M177.6 922.9C85 922.9 9.7 847.6 9.7 755S85 587.2 177.6 587.2 345.5 662.5 345.5 755s-75.3 "
+                "167.9-167.9 167.9z m0-315.7C96 607.2 29.7 673.5 29.7 755S96 902.9 177.6 902.9 325.5 "
+                "836.6 325.5 755s-66.4-147.8-147.9-147.8z"
+            ),
+            fill="#1E1E1E",
+        )
+    )
+    bicycle.add(
+        dwg.path(
+            d="M842.9 755m-157.9 0a157.9 157.9 0 1 0 315.8 0 157.9 157.9 0 1 0-315.8 0Z",
+            fill=primary,
+        )
+    )
+    bicycle.add(
+        dwg.path(
+            d=(
+                "M842.9 922.9C750.3 922.9 675 847.6 675 755s75.3-167.9 167.9-167.9 167.9 75.3 167.9 "
+                "167.9-75.3 167.9-167.9 167.9z m0-315.7C761.3 607.2 695 673.5 695 755s66.3 147.9 147.9 "
+                "147.9S990.8 836.6 990.8 755s-66.4-147.8-147.9-147.8zM177.6 765c-1.2 "
+                "0-2.4-0.2-3.6-0.7-5.1-2-7.7-7.8 -5.7-12.9l190.1-489.7c1.5-3.8 5.2-6.4 "
+                "9.3-6.4h101c5.5 0 10 4.5 10 10s-4.5 10-10 10h-94.2L186.9 758.7c-1.5 3.9-5.3 6.3-9.3 6.3z"
+            ),
+            fill="#1E1E1E",
+        )
+    )
+    bicycle.add(
+        dwg.path(
+            d=(
+                "M603.4 791.7c-2.3 0-4.5-0.8-6.3-2.3L266.3 517.9c-3.3-2.7-4.5-7.1-3.1-11.1s5.2-6.6 "
+                "9.4-6.6h386.9c3.2 0 6.1 1.5 8 4L850.9 749c2.1 2.9 2.6 6.7 1.2 10-1.4 3.3-4.5 5.6-8.1 "
+                "6l-239.5 26.7h-1.1zM300.6 520.2l305.9 251.1L824.4 747 654.5 520.2H300.6zM783 "
+                "398.9H581c-5.5 0-10-4.5-10-10s4.5-10 10-10h202c5.5 0 10 4.5 10 10s-4.5 10-10 10z"
+            ),
+            fill="#1E1E1E",
+        )
+    )
+    bicycle.add(
+        dwg.path(
+            d=(
+                "M603.4 791.7c-0.7 0-1.4-0.1-2-0.2-5.4-1.1-8.9-6.4-7.8-11.8l81.6-392.9c1.1-5.4 6.4-8.9 "
+                "11.8-7.8 5.4 1.1 8.9 6.4 7.8 11.8l-81.6 392.9c-1 4.8-5.1 8-9.8 8z"
+            ),
+            fill="#1E1E1E",
+        )
+    )
+    dwg.add(bicycle)
 
 
 def draw_boat(dwg, colors):
