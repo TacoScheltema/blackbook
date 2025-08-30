@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Version: 0.14
+# Version: 0.15
 
 import base64
 import math
@@ -258,18 +258,21 @@ def company_orgchart(b64_company_name):
 
     employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
 
-    employees_for_json = []
+    # Add avatar URL to each employee for use in the org chart script
     for employee in employees:
-        employee_copy = employee.copy()
-        if "jpegPhoto" in employee_copy and employee_copy["jpegPhoto"]:
-            employee_copy["jpegPhoto"] = [base64.b64encode(p).decode("utf-8") for p in employee_copy["jpegPhoto"]]
-        employees_for_json.append(employee_copy)
+        if employee.get("jpegPhoto") and employee["jpegPhoto"][0]:
+            encoded_photo = base64.b64encode(employee["jpegPhoto"][0]).decode("utf-8")
+            employee["avatar_url"] = f"data:image/jpeg;base64,{encoded_photo}"
+        elif get_config("ENABLE_GENERATED_AVATARS"):
+            employee["avatar_url"] = url_for("main.avatar", seed=employee["dn"])
+        else:
+            employee["avatar_url"] = None
 
     return render_template(
         "company_orgchart.html",
         title=f"Org Chart: {company_name}",
         company_name=company_name,
-        employees=employees_for_json,
+        employees=employees,
     )
 
 
