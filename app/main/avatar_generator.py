@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 import hashlib
-import io
 import math
 import random
 
@@ -391,11 +390,10 @@ def generate_avatar(seed=None, theme="all"):
     colors = random.sample(color_palette, 2)
 
     # Setup the SVG canvas (in-memory)
-    svg_io = io.StringIO()
-    dwg = svgwrite.Drawing(fileobj=svg_io, size=("200px", "200px"), viewBox="0 0 100 100")
+    dwg = svgwrite.Drawing(size=("200px", "200px"), viewBox="0 0 100 100")
 
     # --- Drawing Order ---
     draw_background(dwg, part_seed("background"))
     draw_func(dwg, colors)
 
-    return svg_io.getvalue()
+    return dwg.tostring()
