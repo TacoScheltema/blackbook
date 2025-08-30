@@ -1,12 +1,12 @@
 [tool.black]
-line-length = 112
+line-length = 120
 
 [tool.isort]
 profile = "black"
-line_length = 112
+line_length = 120
 
 [tool.pylint.main]
-max-line-length = 112
+max-line-length = 120
 init-hook = 'import sys; sys.path.append(".")'
 disable = [
     "C0114", # missing-module-docstring

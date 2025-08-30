@@ -141,9 +141,9 @@ def draw_bicycle(dwg, colors):
     bicycle.add(
         dwg.path(
             d=(
-                "M177.6 922.9C85 922.9 9.7 847.6 9.7 755S85 587.2 177.6 587.2 345.5 662.5 345.5 755s-75.3 "
-                "167.9-167.9 167.9z m0-315.7C96 607.2 29.7 673.5 29.7 755S96 902.9 177.6 902.9 325.5 "
-                "836.6 325.5 755s-66.4-147.8-147.9-147.8z"
+                "M177.6 922.9C85 922.9 9.7 847.6 9.7 755S85 587.2 177.6 587.2 345.5 662.5 345.5 755s-75.3 167.9-167.9 "
+                "167.9z m0-315.7C96 607.2 29.7 673.5 29.7 755S96 902.9 177.6 902.9 325.5 836.6 325.5 "
+                "755s-66.4-147.8-147.9-147.8z"
             ),
             fill="#1E1E1E",
         )
@@ -159,9 +159,9 @@ def draw_bicycle(dwg, colors):
             d=(
                 "M842.9 922.9C750.3 922.9 675 847.6 675 755s75.3-167.9 167.9-167.9 167.9 75.3 167.9 "
                 "167.9-75.3 167.9-167.9 167.9z m0-315.7C761.3 607.2 695 673.5 695 755s66.3 147.9 147.9 "
-                "147.9S990.8 836.6 990.8 755s-66.4-147.8-147.9-147.8zM177.6 765c-1.2 "
-                "0-2.4-0.2-3.6-0.7-5.1-2-7.7-7.8 -5.7-12.9l190.1-489.7c1.5-3.8 5.2-6.4 9.3-6.4h101c5.5 "
-                "0 10 4.5 10 10s-4.5 10-10 10h-94.2L186.9 758.7c-1.5 3.9-5.3 6.3-9.3 6.3z"
+                "147.9S990.8 836.6 990.8 755s-66.4-147.8-147.9-147.8zM177.6 765c-1.2 0-2.4-0.2-3.6-0.7-5.1-2-7.7-7.8 "
+                "-5.7-12.9l190.1-489.7c1.5-3.8 5.2-6.4 9.3-6.4h101c5.5 0 10 4.5 10 10s-4.5 10-10 "
+                "10h-94.2L186.9 758.7c-1.5 3.9-5.3 6.3-9.3 6.3z"
             ),
             fill="#1E1E1E",
         )
@@ -250,17 +250,13 @@ def draw_flower(dwg, colors):
     plant.add(dwg.circle(center=(50, 40), r=10, fill=primary))
     for i in range(6):
         angle = math.radians(i * 60)
-        plant.add(
-            dwg.circle(center=(50 + 10 * math.cos(angle), 40 + 10 * math.sin(angle)), r=5, fill=secondary)
-        )
+        plant.add(dwg.circle(center=(50 + 10 * math.cos(angle), 40 + 10 * math.sin(angle)), r=5, fill=secondary))
     dwg.add(plant)
 
 
 def draw_cactus(dwg, colors):
     primary, _ = colors
-    plant = dwg.g(
-        stroke="#1E1E1E", stroke_width=2, stroke_linejoin="round", stroke_linecap="round", fill=primary
-    )
+    plant = dwg.g(stroke="#1E1E1E", stroke_width=2, stroke_linejoin="round", stroke_linecap="round", fill=primary)
     plant.add(dwg.path(d="M 50 80 V 40 C 50 30 60 30 60 40 V 55"))
     plant.add(dwg.path(d="M 50 60 C 40 60 40 50 50 50"))
     dwg.add(plant)
