@@ -130,9 +130,7 @@ def test_sso_authorize(client, mocker):
     THEN check that the user is created and logged in
     """
     mock_oauth_client = MagicMock()
-    mock_oauth_client.authorize_access_token.return_value = {
-        "userinfo": {"sub": "12345", "email": "sso@test.com"}
-    }
+    mock_oauth_client.authorize_access_token.return_value = {"userinfo": {"sub": "12345", "email": "sso@test.com"}}
     mocker.patch("app.oauth.create_client", return_value=mock_oauth_client)
 
     response = client.get("/authorize/google", follow_redirects=True)
