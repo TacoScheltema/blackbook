@@ -128,7 +128,7 @@ def draw_bicycle(dwg, colors):
     bicycle = dwg.g(stroke_width=0)
     bicycle.add(
         dwg.path(
-            d="M510.2 505m-475.7 0a475.7 475.7 0 1 0 951.4 0 475.7 475.7 0 1 0-951.4 0Z",
+            d="M 510.2 505m-475.7 0a475.7 475.7 0 1 0 951.4 0 475.7 475.7 0 1 0-951.4 0Z",
             fill=secondary,
         )
     )
