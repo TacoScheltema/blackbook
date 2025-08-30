@@ -12,6 +12,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Version: 0.14
+
 import base64
 import math
 import uuid
