@@ -248,10 +248,7 @@ def test_edit_person_page_get(client, mocker, editor_user):
     THEN check that the response is valid
     """
     login(client, editor_user.username, "password")
-    sample_person = {
-        "dn": "cn=Test User,dc=example,dc=com",
-        "cn": ["Test User"],
-    }
+    sample_person = {"dn": "cn=Test User,dc=example,dc=com", "cn": ["Test User"], "jpegPhoto": None}
     mocker.patch("app.main.routes.get_entry_by_dn", return_value=sample_person)
     mocker.patch("app.cache.get", return_value=[])
 
