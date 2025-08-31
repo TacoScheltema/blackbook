@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Version: 0.17
+# Version: 0.19
 
 import base64
 import math
@@ -495,6 +495,35 @@ def add_person():
     )
 
 
+def _build_ldap_changes(form_data, current_person, person_attrs):
+    """Builds the dictionary of changes for an LDAP modification."""
+    changes = {}
+    editable_attrs = [attr for attr in person_attrs if attr != "jpegPhoto"]
+
+    for attr in editable_attrs:
+        form_value = form_data.get(attr)
+        if form_value is not None:
+            attr_exists = current_person.get(attr)
+            current_value = (attr_exists or [None])[0]
+
+            if form_value and form_value != current_value:
+                changes[attr] = [(ldap3.MODIFY_REPLACE, [form_value])]
+            elif not form_value and attr_exists:
+                changes[attr] = [(ldap3.MODIFY_DELETE, [])]
+
+    delete_photo_flag = form_data.get("delete_photo") == "true"
+    new_photo_data_b64 = form_data.get("jpegPhoto")
+
+    if delete_photo_flag:
+        if "jpegPhoto" in current_person:
+            changes["jpegPhoto"] = [(ldap3.MODIFY_DELETE, [])]
+    elif new_photo_data_b64:
+        photo_data_bytes = base64.b64decode(new_photo_data_b64)
+        changes["jpegPhoto"] = [(ldap3.MODIFY_REPLACE, [photo_data_bytes])]
+
+    return changes
+
+
 @bp.route("/person/edit/<b64_dn>", methods=["GET", "POST"])
 @login_required
 @editor_required
@@ -522,22 +551,7 @@ def edit_person(b64_dn):
         ]
 
     if request.method == "POST":
-        changes = {}
-        for attr in person_attrs:
-            form_value = request.form.get(attr)
-
-            if form_value is not None:
-                attr_exists = current_person.get(attr)
-                current_value = (attr_exists or [None])[0]
-
-                if form_value and form_value != current_value:
-                    changes[attr] = [(ldap3.MODIFY_REPLACE, [form_value])]
-                elif not form_value and attr_exists:
-                    changes[attr] = [(ldap3.MODIFY_DELETE, [])]
-
-        if "jpegPhoto" in request.form and request.form["jpegPhoto"]:
-            photo_data = base64.b64decode(request.form["jpegPhoto"])
-            changes["jpegPhoto"] = [(ldap3.MODIFY_REPLACE, [photo_data])]
+        changes = _build_ldap_changes(request.form, current_person, person_attrs)
 
         if not changes:
             flash("No changes were submitted.", "info")

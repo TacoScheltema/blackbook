@@ -2,17 +2,39 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .photo-container {
+        position: relative;
+        width: 4rem;
+        height: 4rem;
+    }
+    .delete-photo-btn {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background-color: white;
+        border-radius: 50%;
+        padding: 2px;
+        cursor: pointer;
+        z-index: 10;
+    }
+</style>
+
 <div class="card card-margin">
     <div class="card-body">
         <div class="widget-49">
             <div class="widget-49-title-wrapper">
-                <div class="widget-49-date-primary">
-                    {% if person.jpegPhoto and person.jpegPhoto[0] %}
-                        <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo" id="photo-preview">
-                    {% else %}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16" id="photo-preview">
+                <div class="widget-49-date-primary photo-container">
+                    <img src="data:image/jpeg;base64,{{ person.jpegPhoto[0]|b64encode_photo }}" alt="Contact photo" id="photo-preview" style="display: {% if person.jpegPhoto and person.jpegPhoto[0] %}block{% else %}none{% endif %};">
+                    <div id="icon-preview" style="display: {% if not (person.jpegPhoto and person.jpegPhoto[0]) %}block{% else %}none{% endif %};">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
                           <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
                         </svg>
+                    </div>
+                    {% if person.jpegPhoto and person.jpegPhoto[0] %}
+                    <span class="delete-photo-btn" id="delete-photo-btn" data-bs-toggle="tooltip" title="Delete Photo">
+                        <i class="bi bi-person-fill-dash text-danger"></i>
+                    </span>
                     {% endif %}
                 </div>
                 <div class="widget-49-meeting-info">
@@ -21,6 +43,7 @@
             </div>
             <form action="{{ url_for('main.edit_person', b64_dn=b64_dn) }}" method="post" id="edit-form">
                 <input type="hidden" name="jpegPhoto" id="jpegPhoto">
+                <input type="hidden" name="delete_photo" id="delete_photo" value="false">
                 <div class="row mt-3">
                     {# Loop through the configured attribute map to dynamically create the form. #}
                     {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
@@ -66,6 +89,22 @@
 </div>
 
 <script>
+// Handle deleting the photo
+const deleteBtn = document.getElementById('delete-photo-btn');
+if (deleteBtn) {
+    deleteBtn.addEventListener('click', function() {
+        document.getElementById('delete_photo').value = 'true';
+        document.getElementById('photo-preview').style.display = 'none';
+        document.getElementById('icon-preview').style.display = 'block';
+        deleteBtn.style.display = 'none';
+        // Clear the file input in case a file was selected then deleted
+        document.getElementById('photo-upload').value = '';
+        document.getElementById('jpegPhoto').value = '';
+    });
+}
+
+
+// Handle uploading a new photo
 document.getElementById('photo-upload').addEventListener('change', function(event) {
     const file = event.target.files[0];
     if (!file || file.type !== 'image/jpeg' || file.size > 2 * 1024 * 1024) {
@@ -80,7 +119,6 @@ document.getElementById('photo-upload').addEventListener('change', function(even
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
-            // Resize the image
             const MAX_WIDTH = 800;
             const MAX_HEIGHT = 800;
             let width = img.width;
@@ -101,7 +139,6 @@ document.getElementById('photo-upload').addEventListener('change', function(even
             canvas.height = height;
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Compress the image
             let quality = 0.9;
             let dataUrl;
             do {
@@ -110,7 +147,14 @@ document.getElementById('photo-upload').addEventListener('change', function(even
             } while (dataUrl.length > 200 * 1024 && quality > 0.1);
 
             document.getElementById('photo-preview').src = dataUrl;
+            document.getElementById('photo-preview').style.display = 'block';
+            document.getElementById('icon-preview').style.display = 'none';
             document.getElementById('jpegPhoto').value = dataUrl.split(',')[1];
+            // If a new photo is uploaded, we are not deleting the old one, we are replacing it.
+            document.getElementById('delete_photo').value = 'false';
+            if (deleteBtn) {
+                deleteBtn.style.display = 'block';
+            }
         }
         img.src = e.target.result;
     }
