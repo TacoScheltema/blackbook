@@ -59,6 +59,9 @@
                     <i class="bi bi-building"></i>
                 </a>
                 {% endif %}
+                <a href="{{ url_for('main.person_map', b64_dn=b64_dn) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Show on Map">
+                    <i class="bi bi-geo-alt-fill"></i>
+                </a>
                 <a href="{{ url_for('main.person_vcard', b64_dn=b64_dn) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Download vCard">
                     <i class="bi bi-person-vcard"></i>
                 </a>

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Version: 0.16
+# Version: 0.17
 
 import base64
 import math
@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from functools import wraps
 
 import ldap3
+import requests
 from flask import Response, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
@@ -258,25 +259,24 @@ def company_orgchart(b64_company_name):
 
     employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
 
-    # Create a clean list of dicts for JSON serialization
     employees_for_json = []
     for employee in employees:
         avatar_url = None
-        if employee.get("jpegPhoto") and employee["jpegPhoto"][0]:
-            encoded_photo = base64.b64encode(employee["jpegPhoto"][0]).decode("utf-8")
-            avatar_url = f"data:image/jpeg;base64,{encoded_photo}"
+        if "jpegPhoto" in employee and employee["jpegPhoto"] and employee["jpegPhoto"][0]:
+            photo_data = base64.b64encode(employee["jpegPhoto"][0]).decode("utf-8")
+            avatar_url = f"data:image/jpeg;base64,{photo_data}"
         elif get_config("ENABLE_GENERATED_AVATARS"):
-            avatar_url = url_for("main.avatar", seed=employee["dn"])
+            avatar_url = url_for("main.avatar", seed=employee["dn"], _external=True)
 
-        employees_for_json.append(
-            {
-                "dn": employee["dn"],
-                "cn": employee.get("cn"),
-                "title": employee.get("title"),
-                "manager": employee.get("manager"),
-                "avatar_url": avatar_url,
-            }
-        )
+        # Create a clean, JSON-serializable dictionary
+        clean_employee = {
+            "dn": employee["dn"],
+            "cn": employee.get("cn"),
+            "title": employee.get("title"),
+            "manager": employee.get("manager"),
+            "avatar_url": avatar_url,
+        }
+        employees_for_json.append(clean_employee)
 
     return render_template(
         "company_orgchart.html",
@@ -353,6 +353,53 @@ def person_detail(b64_dn):
         back_params=back_params,
         manager_name=manager_name,
         countries=countries,
+    )
+
+
+@bp.route("/person/map/<b64_dn>")
+@login_required
+def person_map(b64_dn):
+    """Displays the location of a person on a map."""
+    try:
+        dn = b64decode_with_padding(b64_dn)
+    except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    person_attrs = ["cn", "street", "l", "postalCode", "c"]
+    person = get_entry_by_dn(dn, person_attrs)
+    if not person:
+        abort(404)
+
+    latitude, longitude = None, None
+    address_parts = [
+        (person.get("street") or [""])[0],
+        (person.get("l") or [""])[0],
+        (person.get("postalCode") or [""])[0],
+        (countries.get((person.get("c") or [""])[0]) or ""),
+    ]
+    full_address = ", ".join(filter(None, address_parts))
+
+    if full_address:
+        try:
+            # Using Nominatim for geocoding
+            url = f"https://nominatim.openstreetmap.org/search?format=json&q={full_address}"
+            headers = {"User-Agent": "BlackbookAddressBook/1.0"}
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            if data:
+                latitude = data[0]["lat"]
+                longitude = data[0]["lon"]
+        except requests.exceptions.RequestException as e:
+            print(f"Could not connect to OpenStreetMap API: {e}")
+
+    return render_template(
+        "person_map.html",
+        title=f"Map for {person.get('cn', ['Unknown'])[0]}",
+        person=person,
+        b64_dn=b64_dn,
+        latitude=latitude,
+        longitude=longitude,
     )
 
 
