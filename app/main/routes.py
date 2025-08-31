@@ -12,6 +12,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Version: 0.16
+
 import base64
 import math
 import uuid
@@ -255,12 +258,25 @@ def company_orgchart(b64_company_name):
 
     employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
 
+    # Create a clean list of dicts for JSON serialization
     employees_for_json = []
     for employee in employees:
-        employee_copy = employee.copy()
-        if "jpegPhoto" in employee_copy and employee_copy["jpegPhoto"]:
-            employee_copy["jpegPhoto"] = [base64.b64encode(p).decode("utf-8") for p in employee_copy["jpegPhoto"]]
-        employees_for_json.append(employee_copy)
+        avatar_url = None
+        if employee.get("jpegPhoto") and employee["jpegPhoto"][0]:
+            encoded_photo = base64.b64encode(employee["jpegPhoto"][0]).decode("utf-8")
+            avatar_url = f"data:image/jpeg;base64,{encoded_photo}"
+        elif get_config("ENABLE_GENERATED_AVATARS"):
+            avatar_url = url_for("main.avatar", seed=employee["dn"])
+
+        employees_for_json.append(
+            {
+                "dn": employee["dn"],
+                "cn": employee.get("cn"),
+                "title": employee.get("title"),
+                "manager": employee.get("manager"),
+                "avatar_url": avatar_url,
+            }
+        )
 
     return render_template(
         "company_orgchart.html",
