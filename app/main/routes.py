@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Version: 0.16
+# Version: 0.19
 
 import base64
 import math
@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from functools import wraps
 
 import ldap3
+import requests
 from flask import Response, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
@@ -258,25 +259,24 @@ def company_orgchart(b64_company_name):
 
     employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
 
-    # Create a clean list of dicts for JSON serialization
     employees_for_json = []
     for employee in employees:
         avatar_url = None
-        if employee.get("jpegPhoto") and employee["jpegPhoto"][0]:
-            encoded_photo = base64.b64encode(employee["jpegPhoto"][0]).decode("utf-8")
-            avatar_url = f"data:image/jpeg;base64,{encoded_photo}"
+        if "jpegPhoto" in employee and employee["jpegPhoto"] and employee["jpegPhoto"][0]:
+            photo_data = base64.b64encode(employee["jpegPhoto"][0]).decode("utf-8")
+            avatar_url = f"data:image/jpeg;base64,{photo_data}"
         elif get_config("ENABLE_GENERATED_AVATARS"):
-            avatar_url = url_for("main.avatar", seed=employee["dn"])
+            avatar_url = url_for("main.avatar", seed=employee["dn"], _external=True)
 
-        employees_for_json.append(
-            {
-                "dn": employee["dn"],
-                "cn": employee.get("cn"),
-                "title": employee.get("title"),
-                "manager": employee.get("manager"),
-                "avatar_url": avatar_url,
-            }
-        )
+        # Create a clean, JSON-serializable dictionary
+        clean_employee = {
+            "dn": employee["dn"],
+            "cn": employee.get("cn"),
+            "title": employee.get("title"),
+            "manager": employee.get("manager"),
+            "avatar_url": avatar_url,
+        }
+        employees_for_json.append(clean_employee)
 
     return render_template(
         "company_orgchart.html",
@@ -353,6 +353,53 @@ def person_detail(b64_dn):
         back_params=back_params,
         manager_name=manager_name,
         countries=countries,
+    )
+
+
+@bp.route("/person/map/<b64_dn>")
+@login_required
+def person_map(b64_dn):
+    """Displays the location of a person on a map."""
+    try:
+        dn = b64decode_with_padding(b64_dn)
+    except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    person_attrs = ["cn", "street", "l", "postalCode", "c"]
+    person = get_entry_by_dn(dn, person_attrs)
+    if not person:
+        abort(404)
+
+    latitude, longitude = None, None
+    address_parts = [
+        (person.get("street") or [""])[0],
+        (person.get("l") or [""])[0],
+        (person.get("postalCode") or [""])[0],
+        (countries.get((person.get("c") or [""])[0]) or ""),
+    ]
+    full_address = ", ".join(filter(None, address_parts))
+
+    if full_address:
+        try:
+            # Using Nominatim for geocoding
+            url = f"https://nominatim.openstreetmap.org/search?format=json&q={full_address}"
+            headers = {"User-Agent": "BlackbookAddressBook/1.0"}
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            if data:
+                latitude = data[0]["lat"]
+                longitude = data[0]["lon"]
+        except requests.exceptions.RequestException as e:
+            print(f"Could not connect to OpenStreetMap API: {e}")
+
+    return render_template(
+        "person_map.html",
+        title=f"Map for {person.get('cn', ['Unknown'])[0]}",
+        person=person,
+        b64_dn=b64_dn,
+        latitude=latitude,
+        longitude=longitude,
     )
 
 
@@ -448,6 +495,35 @@ def add_person():
     )
 
 
+def _build_ldap_changes(form_data, current_person, person_attrs):
+    """Builds the dictionary of changes for an LDAP modification."""
+    changes = {}
+    editable_attrs = [attr for attr in person_attrs if attr != "jpegPhoto"]
+
+    for attr in editable_attrs:
+        form_value = form_data.get(attr)
+        if form_value is not None:
+            attr_exists = current_person.get(attr)
+            current_value = (attr_exists or [None])[0]
+
+            if form_value and form_value != current_value:
+                changes[attr] = [(ldap3.MODIFY_REPLACE, [form_value])]
+            elif not form_value and attr_exists:
+                changes[attr] = [(ldap3.MODIFY_DELETE, [])]
+
+    delete_photo_flag = form_data.get("delete_photo") == "true"
+    new_photo_data_b64 = form_data.get("jpegPhoto")
+
+    if delete_photo_flag:
+        if "jpegPhoto" in current_person:
+            changes["jpegPhoto"] = [(ldap3.MODIFY_DELETE, [])]
+    elif new_photo_data_b64:
+        photo_data_bytes = base64.b64decode(new_photo_data_b64)
+        changes["jpegPhoto"] = [(ldap3.MODIFY_REPLACE, [photo_data_bytes])]
+
+    return changes
+
+
 @bp.route("/person/edit/<b64_dn>", methods=["GET", "POST"])
 @login_required
 @editor_required
@@ -475,22 +551,7 @@ def edit_person(b64_dn):
         ]
 
     if request.method == "POST":
-        changes = {}
-        for attr in person_attrs:
-            form_value = request.form.get(attr)
-
-            if form_value is not None:
-                attr_exists = current_person.get(attr)
-                current_value = (attr_exists or [None])[0]
-
-                if form_value and form_value != current_value:
-                    changes[attr] = [(ldap3.MODIFY_REPLACE, [form_value])]
-                elif not form_value and attr_exists:
-                    changes[attr] = [(ldap3.MODIFY_DELETE, [])]
-
-        if "jpegPhoto" in request.form and request.form["jpegPhoto"]:
-            photo_data = base64.b64decode(request.form["jpegPhoto"])
-            changes["jpegPhoto"] = [(ldap3.MODIFY_REPLACE, [photo_data])]
+        changes = _build_ldap_changes(request.form, current_person, person_attrs)
 
         if not changes:
             flash("No changes were submitted.", "info")
