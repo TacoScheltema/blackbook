@@ -28,7 +28,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///" + os.path.join(basedir, "app.db"))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     READONLY = os.environ.get("READONLY", "False").lower() in ("true", "1", "t")
-    APP_TITLE = os.environ.get("APP_TITLE", "LDAP Address Book")
+    APP_TITLE = os.environ.get("APP_TITLE", "Blackbook")
 
     # --- LDAP Configuration ---
     # The user for binding must have read access to the directory.
