@@ -34,17 +34,33 @@ When adding or editing contacts through the web ui a single background job is sc
 
 Here are a few examples of the application's interface.
 
-**Main Contacts View:**
+<table>
+  <tr>
+    <th>Main Contacts View</th>
+    <th>Company List View</th>
+  </tr>
+  <tr>
+    <td><img src="media/screenshots/contacts.png" width="400" height="400"></td>
+    <td><img src="media/screenshots/companies.png" width="400" height="400"></td>
+  </tr>
+  <tr>
+    <th>Company Cards View</th>
+    <th>Company Orgchart View</th>
+  </tr>
+  <tr>
+    <td><img src="media/screenshots/cards.png" width="400" height="400"></td>
+    <td><img src="media/screenshots/orgchart.png" width="400" height="400"></td>
+  </tr>
+   <tr>
+    <th>Contact Detail View with QR Code</th>
+    <th>Contact Maps View</th>
+  </tr>
+  <tr>
+    <td><img src="media/screenshots/qr.png" width="400" height="400"></td>
+    <td><img src="media/screenshots/map.png" width="400" height="400"></td>
+  </tr>
+</table>
 
-<img src="media/screenshots/contacts.png" width="400" height="400">
-
-**Company List View:**
-
-<img src="media/screenshots/companies.png" width="400" height="400">
-
-**Contact Detail View with QR Code:**
-
-<img src="media/screenshots/qr.png" width="400" height="400">
 
 For full setup and running instructions, please see the [**INSTALL.md**](INSTALL.md) file.
 
