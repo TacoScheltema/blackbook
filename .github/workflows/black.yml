@@ -1,0 +1,20 @@
+name: Lint & Format Python Code
+
+on:
+  push:
+    branches:
+      - main # or your default branch, e.g., master
+  pull_request:
+    branches:
+      - main # or your default branch
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # Checkout the repository code
+      - name: Run Black
+        uses: psf/black@stable # Use the official Black GitHub Action
+        with:
+          options: "--check --diff --verbose"
+          src: "." # Specify the directory to format (e.g., current directory)
