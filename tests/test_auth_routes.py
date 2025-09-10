@@ -12,6 +12,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
+
+#
+# Author: Taco Scheltema <github@scheltema.me>
+#
+
 from unittest.mock import MagicMock
 
 from app.models import User
