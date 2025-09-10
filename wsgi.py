@@ -12,6 +12,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
+
+#
+# Author: Taco Scheltema <github@scheltema.me>
+#
+
 #
 # This is the entry point for a WSGI server like Gunicorn or uWSGI.
 # Example usage: gunicorn --bind 0.0.0.0:8000 wsgi:application

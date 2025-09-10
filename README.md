@@ -9,6 +9,10 @@ The application allows users to browse, search, add, edit and view contact and c
 Licensed under the GNU General Public License v3.0 (GPLv3).
 See the LICENSE file for details.
 
+## Author
+
+Taco Scheltema 2025
+
 ## **Features**
 
 * **Secure Authentication**: Multiple authentication options, including local database users, direct LDAP bind, and Single Sign-On (SSO) via Google, Keycloak, or Authentik.
