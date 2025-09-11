@@ -1,0 +1,68 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card card-margin">
+    <div class="card-header bg-dark text-white">
+        <h1 class="my-2">Importing Google Contacts</h1>
+    </div>
+    <div class="card-body">
+        <p>Please wait while your contacts are being imported. This may take a moment...</p>
+        <div class="progress" style="height: 30px;">
+            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                <span id="progress-text">Starting...</span>
+            </div>
+        </div>
+        <div id="import-log" class="mt-3" style="font-family: monospace; font-size: 0.8rem; height: 200px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; border-radius: 4px; background-color: #f8f9fa;">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block body_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const importLog = document.getElementById('import-log');
+
+    const eventSource = new EventSource("{{ url_for('main.import_stream') }}");
+
+    eventSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+
+        if (data.status === 'progress') {
+            const percentage = (data.current / data.total) * 100;
+            progressBar.style.width = percentage + '%';
+            progressBar.setAttribute('aria-valuenow', percentage);
+            progressText.textContent = `Processing ${data.current} of ${data.total}...`;
+            importLog.innerHTML += `<div>${data.message}</div>`;
+        } else if (data.status === 'complete') {
+            progressBar.classList.remove('progress-bar-animated');
+            progressBar.classList.add('bg-success');
+            progressText.textContent = data.message;
+            eventSource.close();
+            // Redirect back to the index after a short delay
+            setTimeout(() => {
+                window.location.href = "{{ url_for('main.index') }}";
+            }, 2000);
+        } else if (data.status === 'error') {
+            progressBar.classList.remove('progress-bar-animated');
+            progressBar.classList.add('bg-danger');
+            progressText.textContent = 'An error occurred.';
+            importLog.innerHTML += `<div class="text-danger">${data.message}</div>`;
+            eventSource.close();
+        }
+        // Auto-scroll the log
+        importLog.scrollTop = importLog.scrollHeight;
+    };
+
+    eventSource.onerror = function(err) {
+        console.error("EventSource failed:", err);
+        progressBar.classList.add('bg-danger');
+        progressText.textContent = 'Connection to server lost. Please try again.';
+        eventSource.close();
+    };
+});
+</script>
+{% endblock %}

@@ -13,25 +13,23 @@
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 #
-
-#
-# Author: Taco Scheltema <github@scheltema.me>
-#
-
-# Version: 0.19
+# Version: 0.32
 
 import base64
+import json
 import math
+import pprint
+import re
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
 
 import ldap3
 import requests
-from flask import Response, abort, current_app, flash, redirect, render_template, request, url_for
+from flask import Response, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 
-from app import cache, db, scheduler
+from app import cache, db, oauth, scheduler
 from app.email import send_password_reset_email
 from app.jobs import refresh_ldap_cache
 from app.ldap_utils import (
@@ -614,6 +612,189 @@ def avatar(seed):
     return Response(svg_data, mimetype="image/svg+xml")
 
 
+# --- Import Routes ---
+
+
+@bp.route("/import/google")
+@login_required
+@editor_required
+def import_google_contacts():
+    """Initiates the Google Contacts import process."""
+    if not get_config("ENABLE_GOOGLE_CONTACTS_IMPORT"):
+        abort(404)
+    # Use a different callback URI for import to separate it from login
+    redirect_uri = url_for("main.authorize_google_import", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@bp.route("/import/google/callback")
+@login_required
+@editor_required
+def authorize_google_import():
+    """Callback route for Google Contacts import. Redirects to the progress page."""
+    if not get_config("ENABLE_GOOGLE_CONTACTS_IMPORT"):
+        abort(404)
+
+    try:
+        token = oauth.google.authorize_access_token()
+        session["google_import_token"] = token
+    except Exception as e:
+        flash(f"Authorization with Google failed: {e}", "danger")
+        return redirect(url_for("main.index"))
+
+    return redirect(url_for("main.import_status"))
+
+
+@bp.route("/import/google/status")
+@login_required
+@editor_required
+def import_status():
+    """Renders the page that will show the import progress."""
+    if "google_import_token" not in session:
+        flash("No active import session found.", "warning")
+        return redirect(url_for("main.index"))
+    return render_template("import_progress.html", title="Importing Contacts")
+
+
+def generate_import_stream(token, app, all_people):  # pylint: disable=too-many-locals,too-many-statements
+    """A generator function that performs the import and yields progress."""
+    if not token:
+        payload = {"status": "error", "message": "No token found in session."}
+        yield f"data: {json.dumps(payload)}\n\n"
+        return
+
+    access_token = token.get("access_token")
+    headers = {"Authorization": f"Bearer {access_token}"}
+    all_connections = []
+    next_page_token = None
+
+    try:
+        while True:
+            params = {"personFields": "names,emailAddresses,phoneNumbers,organizations,addresses", "pageSize": 1000}
+            if next_page_token:
+                params["pageToken"] = next_page_token
+
+            resp = requests.get(
+                "https://people.googleapis.com/v1/people/me/connections", headers=headers, params=params, timeout=15
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            all_connections.extend(data.get("connections", []))
+            next_page_token = data.get("nextPageToken")
+            if not next_page_token:
+                break
+    except requests.exceptions.RequestException as e:
+        payload = {"status": "error", "message": str(e)}
+        yield f"data: {json.dumps(payload)}\n\n"
+        return
+
+    total_contacts = len(all_connections)
+    if total_contacts == 0:
+        payload = {"status": "complete", "message": "No contacts found to import."}
+        yield f"data: {json.dumps(payload)}\n\n"
+        return
+
+    if app.config["DEBUG"]:
+        print("--- Google Contacts Data (First 5) ---")
+        pprint.pprint(all_connections[:5])
+        print("---------------------------------------")
+
+    existing_emails = {p["mail"][0].lower() for p in all_people if p.get("mail") and p["mail"][0]}
+    existing_names = {p["cn"][0].lower() for p in all_people if p.get("cn") and p["cn"][0]}
+    imported_count = 0
+    skipped_count = 0
+    dn_template = app.config["LDAP_CONTACT_DN_TEMPLATE"]
+    object_classes = app.config["LDAP_PERSON_OBJECT_CLASS"].split(",")
+
+    for i, person in enumerate(all_connections):
+        with app.app_context():
+            attributes = {}
+            if person.get("names"):
+                attributes["cn"] = person["names"][0].get("displayName")
+                attributes["givenName"] = person["names"][0].get("givenName")
+                attributes["sn"] = person["names"][0].get("familyName")
+                if not attributes["sn"] and attributes["cn"]:
+                    attributes["sn"] = attributes["cn"]
+            if not attributes.get("cn"):
+                skipped_count += 1
+                payload = {
+                    "status": "progress",
+                    "current": i + 1,
+                    "total": total_contacts,
+                    "message": "Skipping contact with no name.",
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+                continue
+
+            if person.get("emailAddresses"):
+                attributes["mail"] = person["emailAddresses"][0].get("value")
+            if person.get("phoneNumbers"):
+                phone = person["phoneNumbers"][0].get("value")
+                if phone:
+                    attributes["telephoneNumber"] = re.sub(r"[^0-9+]", "", phone)
+            if person.get("organizations"):
+                attributes["o"] = person["organizations"][0].get("name")
+                attributes["title"] = person["organizations"][0].get("title")
+            if person.get("addresses"):
+                attributes["street"] = person["addresses"][0].get("streetAddress")
+                attributes["l"] = person["addresses"][0].get("city")
+                attributes["postalCode"] = person["addresses"][0].get("postalCode")
+                attributes["c"] = person["addresses"][0].get("countryCode")
+
+            email = (attributes.get("mail") or "").lower()
+            name = (attributes.get("cn") or "").lower()
+            if (email and email in existing_emails) or (name and name in existing_names):
+                skipped_count += 1
+                payload = {
+                    "status": "progress",
+                    "current": i + 1,
+                    "total": total_contacts,
+                    "message": f"Skipping duplicate: {name}",
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+                continue
+
+            new_uid = str(uuid.uuid4())
+            attributes["uid"] = new_uid
+            new_dn = dn_template.format(uid=new_uid, cn=attributes["cn"])
+            if add_ldap_entry(new_dn, object_classes, {k: v for k, v in attributes.items() if v}):
+                imported_count += 1
+                if email:
+                    existing_emails.add(email)
+                if name:
+                    existing_names.add(name)
+                message = f"Successfully imported: {name}"
+            else:
+                message = f"Failed to import: {name}"
+
+            payload = {"status": "progress", "current": i + 1, "total": total_contacts, "message": message}
+            yield f"data: {json.dumps(payload)}\n\n"
+
+    if imported_count > 0:
+        with app.app_context():
+            scheduler.add_job(
+                func=refresh_ldap_cache,
+                args=[app],
+                id="manual_refresh_import",
+                replace_existing=True,
+            )
+
+    final_message = f"Import complete. Added {imported_count} new contacts and skipped {skipped_count} duplicates."
+    payload = {"status": "complete", "message": final_message}
+    yield f"data: {json.dumps(payload)}\n\n"
+
+
+@bp.route("/import/google/stream")
+@login_required
+@editor_required
+def import_stream():
+    """The server-sent event stream for the import process."""
+    token = session.pop("google_import_token", None)
+    app = current_app._get_current_object()  # pylint: disable=protected-access
+    all_people = cache.get("all_people") or []
+    return Response(generate_import_stream(token, app, all_people), mimetype="text/event-stream")
+
+
 # --- Admin Routes ---
 
 
@@ -621,13 +802,15 @@ def avatar(seed):
 @login_required
 @admin_required
 def admin_users():
-    local_users = User.query.filter(User.auth_source == "local").all()
-    ldap_users = User.query.filter(User.auth_source == "ldap").all()
+    local_users = User.query.filter_by(auth_source="local").all()
+    ldap_users = User.query.filter_by(auth_source="ldap").all()
+    google_users = User.query.filter_by(auth_source="google").all()
     return render_template(
         "admin/users.html",
         title="Manage Users",
         local_users=local_users,
         ldap_users=ldap_users,
+        google_users=google_users,
         current_time=datetime.now(timezone.utc),
     )
 

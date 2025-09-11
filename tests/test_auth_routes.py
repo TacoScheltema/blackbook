@@ -141,6 +141,6 @@ def test_sso_authorize(client, mocker):
     response = client.get("/authorize/google", follow_redirects=True)
     assert response.status_code == 200
     assert b"Address Book" in response.data
-    user = User.query.filter_by(username="12345").first()
+    user = User.query.filter_by(username="12345", auth_source="google").first()
     assert user is not None
     assert user.email == "sso@test.com"
