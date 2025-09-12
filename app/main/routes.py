@@ -12,14 +12,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
+
 #
-# Version: 0.32
+# Author: Taco Scheltema <github@scheltema.me>
+#
+
+# Version: 0.34
 
 import base64
 import json
 import math
-import pprint
 import re
+import time
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
@@ -37,8 +41,11 @@ from app.ldap_utils import (
     add_ldap_user,
     delete_ldap_contact,
     delete_ldap_user,
+    ensure_ou_exists,
     get_entry_by_dn,
     modify_ldap_entry,
+    move_ldap_entry,
+    search_ldap,
 )
 from app.main import bp
 from app.main.avatar_generator import generate_avatar
@@ -131,6 +138,26 @@ def _get_index_request_args():
     return args
 
 
+def _get_visible_contacts():
+    """Gets all contacts visible to the current user (public + their private)."""
+    public_contacts = cache.get("all_people") or []
+    private_contacts = []
+
+    private_ou_template = get_config("LDAP_PRIVATE_OU_TEMPLATE")
+    if private_ou_template:
+        user_ou = private_ou_template.format(user_id=current_user.id)
+        person_attrs = get_config("LDAP_PERSON_ATTRIBUTES")
+        private_contacts = search_ldap("(objectClass=*)", person_attrs, search_base=user_ou)
+
+    # Add a flag to distinguish private contacts in the template
+    for contact in private_contacts:
+        contact["is_private"] = True
+
+    # Combine and remove duplicates (in case a contact was moved but cache is stale)
+    all_contacts_dict = {p["dn"]: p for p in private_contacts + public_contacts}
+    return list(all_contacts_dict.values())
+
+
 def _filter_and_sort_people(all_people, args):
     """Helper to filter and sort the list of people."""
     if args["search_query"]:
@@ -155,8 +182,8 @@ def _filter_and_sort_people(all_people, args):
 def index():
     """Main index page. Now only shows a paginated list of all persons."""
     args = _get_index_request_args()
-    all_people = cache.get("all_people") or []
-    filtered_people = _filter_and_sort_people(all_people, args)
+    all_visible_contacts = _get_visible_contacts()
+    filtered_people = _filter_and_sort_people(all_visible_contacts, args)
 
     total_people = len(filtered_people)
     start_index = (args["page"] - 1) * args["page_size"]
@@ -188,11 +215,17 @@ def index():
 def all_companies():
     """Displays a list of unique company names derived from the contacts."""
     letter = request.args.get("letter", "")
-    all_people = cache.get("all_people") or []
+    all_visible_contacts = _get_visible_contacts()
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
     company_names = sorted(
-        list(set(p[company_link_attr][0] for p in all_people if p.get(company_link_attr) and p[company_link_attr]))
+        list(
+            set(
+                p[company_link_attr][0]
+                for p in all_visible_contacts
+                if p.get(company_link_attr) and p[company_link_attr]
+            )
+        )
     )
 
     if letter:
@@ -234,10 +267,12 @@ def company_detail(b64_company_name):
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
-    all_people = cache.get("all_people") or []
+    all_visible_contacts = _get_visible_contacts()
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
-    employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
+    employees = [
+        p for p in all_visible_contacts if p.get(company_link_attr) and p[company_link_attr][0] == company_name
+    ]
     employees.sort(key=lambda p: (p.get("sn")[0] if p.get("sn") else "").lower())
 
     return render_template(
@@ -257,10 +292,12 @@ def company_orgchart(b64_company_name):
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
-    all_people = cache.get("all_people") or []
+    all_visible_contacts = _get_visible_contacts()
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
-    employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
+    employees = [
+        p for p in all_visible_contacts if p.get(company_link_attr) and p[company_link_attr][0] == company_name
+    ]
 
     employees_for_json = []
     for employee in employees:
@@ -298,10 +335,12 @@ def company_cards(b64_company_name):
     except (base64.binascii.Error, UnicodeDecodeError):
         abort(404)
 
-    all_people = cache.get("all_people") or []
+    all_visible_contacts = _get_visible_contacts()
     company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
 
-    employees = [p for p in all_people if p.get(company_link_attr) and p[company_link_attr][0] == company_name]
+    employees = [
+        p for p in all_visible_contacts if p.get(company_link_attr) and p[company_link_attr][0] == company_name
+    ]
 
     return render_template(
         "company_cards.html",
@@ -325,6 +364,10 @@ def person_detail(b64_dn):
     if not person:
         abort(404)
 
+    # Pre-process the photo for direct use in the template
+    if "jpegPhoto" in person and person["jpegPhoto"] and person["jpegPhoto"][0]:
+        person["jpegPhoto"][0] = base64.b64encode(person["jpegPhoto"][0]).decode("utf-8")
+
     person_name = person.get("cn", ["Unknown"])[0]
 
     manager_name = None
@@ -335,8 +378,6 @@ def person_detail(b64_dn):
             manager_name = manager.get("cn", [None])[0]
 
     person_for_json = person.copy()
-    if "jpegPhoto" in person_for_json and person_for_json["jpegPhoto"]:
-        person_for_json["jpegPhoto"] = [base64.b64encode(p).decode("utf-8") for p in person_for_json["jpegPhoto"]]
 
     back_params = {
         "page": request.args.get("page"),
@@ -347,6 +388,9 @@ def person_detail(b64_dn):
     }
     back_params = {k: v for k, v in back_params.items() if v is not None}
 
+    private_ou_template = get_config("LDAP_PRIVATE_OU_TEMPLATE")
+    is_private = private_ou_template and f"ou=user_{current_user.id}" in dn
+
     return render_template(
         "person_detail.html",
         title=person_name,
@@ -356,6 +400,7 @@ def person_detail(b64_dn):
         back_params=back_params,
         manager_name=manager_name,
         countries=countries,
+        is_private=is_private,
     )
 
 
@@ -472,6 +517,9 @@ def add_person():
         if not dn_template:
             flash("LDAP contact DN template is not configured.", "danger")
             return redirect(url_for("main.add_person"))
+
+        owner_attr = get_config("LDAP_OWNER_ATTRIBUTE")
+        attributes[owner_attr] = str(current_user.id)
 
         new_uid = str(uuid.uuid4())
         attributes["uid"] = new_uid
@@ -619,18 +667,29 @@ def avatar(seed):
 @login_required
 @editor_required
 def import_google_contacts():
+    """Renders the import options page."""
+    if not get_config("ENABLE_GOOGLE_CONTACTS_IMPORT"):
+        abort(404)
+    return render_template("import_options.html", title="Import Options")
+
+
+@bp.route("/import/google/authorize")
+@login_required
+@editor_required
+def authorize_google_import():
     """Initiates the Google Contacts import process."""
     if not get_config("ENABLE_GOOGLE_CONTACTS_IMPORT"):
         abort(404)
-    # Use a different callback URI for import to separate it from login
-    redirect_uri = url_for("main.authorize_google_import", _external=True)
+    privacy = request.args.get("privacy", "public")
+    session["import_privacy"] = privacy
+    redirect_uri = url_for("main.google_import_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 
 @bp.route("/import/google/callback")
 @login_required
 @editor_required
-def authorize_google_import():
+def google_import_callback():
     """Callback route for Google Contacts import. Redirects to the progress page."""
     if not get_config("ENABLE_GOOGLE_CONTACTS_IMPORT"):
         abort(404)
@@ -656,7 +715,7 @@ def import_status():
     return render_template("import_progress.html", title="Importing Contacts")
 
 
-def generate_import_stream(token, app, all_people):  # pylint: disable=too-many-locals,too-many-statements
+def generate_import_stream(token, app, user_id, privacy):  # pylint: disable=too-many-locals,too-many-statements
     """A generator function that performs the import and yields progress."""
     if not token:
         payload = {"status": "error", "message": "No token found in session."}
@@ -694,17 +753,24 @@ def generate_import_stream(token, app, all_people):  # pylint: disable=too-many-
         yield f"data: {json.dumps(payload)}\n\n"
         return
 
-    if app.config["DEBUG"]:
-        print("--- Google Contacts Data (First 5) ---")
-        pprint.pprint(all_connections[:5])
-        print("---------------------------------------")
-
-    existing_emails = {p["mail"][0].lower() for p in all_people if p.get("mail") and p["mail"][0]}
-    existing_names = {p["cn"][0].lower() for p in all_people if p.get("cn") and p["cn"][0]}
     imported_count = 0
     skipped_count = 0
-    dn_template = app.config["LDAP_CONTACT_DN_TEMPLATE"]
+    owner_attr = app.config["LDAP_OWNER_ATTRIBUTE"]
     object_classes = app.config["LDAP_PERSON_OBJECT_CLASS"].split(",")
+    public_dn_template = app.config["LDAP_CONTACT_DN_TEMPLATE"]
+
+    if privacy == "private":
+        private_ou_template = app.config["LDAP_PRIVATE_OU_TEMPLATE"]
+        search_base = private_ou_template.format(user_id=user_id)
+        with app.app_context():
+            ensure_ou_exists(search_base)
+    else:
+        search_base = app.config["LDAP_CONTACTS_DN"]
+
+    with app.app_context():
+        existing_contacts = search_ldap("(objectClass=*)", ["cn", "mail"], search_base=search_base)
+        existing_emails = {p["mail"][0].lower() for p in existing_contacts if p.get("mail") and p["mail"][0]}
+        existing_names = {p["cn"][0].lower() for p in existing_contacts if p.get("cn") and p["cn"][0]}
 
     for i, person in enumerate(all_connections):
         with app.app_context():
@@ -754,9 +820,14 @@ def generate_import_stream(token, app, all_people):  # pylint: disable=too-many-
                 yield f"data: {json.dumps(payload)}\n\n"
                 continue
 
+            attributes[owner_attr] = str(user_id)
             new_uid = str(uuid.uuid4())
             attributes["uid"] = new_uid
-            new_dn = dn_template.format(uid=new_uid, cn=attributes["cn"])
+            new_dn = public_dn_template.format(uid=new_uid, cn=attributes["cn"])
+
+            if privacy == "private":
+                new_dn = f"cn={attributes['cn']},{search_base}"
+
             if add_ldap_entry(new_dn, object_classes, {k: v for k, v in attributes.items() if v}):
                 imported_count += 1
                 if email:
@@ -791,8 +862,8 @@ def import_stream():
     """The server-sent event stream for the import process."""
     token = session.pop("google_import_token", None)
     app = current_app._get_current_object()  # pylint: disable=protected-access
-    all_people = cache.get("all_people") or []
-    return Response(generate_import_stream(token, app, all_people), mimetype="text/event-stream")
+    privacy = session.pop("import_privacy", "public")
+    return Response(generate_import_stream(token, app, current_user.id, privacy), mimetype="text/event-stream")
 
 
 # --- Admin Routes ---
@@ -938,3 +1009,42 @@ def set_roles(user_id):
     db.session.commit()
     flash(f"Roles updated for {user.username}.", "success")
     return redirect(url_for("main.admin_users"))
+
+
+@bp.route("/person/toggle_privacy/<b64_dn>", methods=["POST"])
+@login_required
+@editor_required
+def toggle_contact_privacy(b64_dn):
+    """Moves a contact between the public and the user's private OU."""
+    try:
+        old_dn = b64decode_with_padding(b64_dn)
+    except (base64.binascii.Error, UnicodeDecodeError):
+        abort(404)
+
+    public_ou = get_config("LDAP_CONTACTS_DN")
+    private_ou_template = get_config("LDAP_PRIVATE_OU_TEMPLATE")
+    private_ou = private_ou_template.format(user_id=current_user.id)
+
+    if private_ou in old_dn:
+        # Move from private to public
+        new_parent_dn = public_ou
+    else:
+        # Move from public to private
+        ensure_ou_exists(private_ou)
+        new_parent_dn = private_ou
+
+    if move_ldap_entry(old_dn, new_parent_dn):
+        flash("Contact privacy updated successfully. The list will refresh shortly.", "success")
+        scheduler.add_job(
+            func=refresh_ldap_cache,
+            args=[current_app._get_current_object()],
+            id=f"manual_refresh_move_{uuid.uuid4()}",
+            replace_existing=False,
+        )
+        # Give the cache a moment to update
+        time.sleep(1)
+        rdn = old_dn.split(",")[0]
+        new_dn = f"{rdn},{new_parent_dn}"
+        return redirect(url_for("main.person_detail", b64_dn=base64.urlsafe_b64encode(new_dn.encode()).decode()))
+
+    return redirect(url_for("main.person_detail", b64_dn=b64_dn))

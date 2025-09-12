@@ -77,6 +77,12 @@ class Config:
         "1",
         "t",
     )
+    ENABLE_PRIVATE_CONTACTS = os.environ.get("ENABLE_PRIVATE_CONTACTS", "False").lower() in ("true", "1", "t")
+    LDAP_OWNER_ATTRIBUTE = os.environ.get("LDAP_OWNER_ATTRIBUTE", "employeeNumber")
+
+    # Ensure the owner attribute is always fetched from LDAP for filtering
+    if LDAP_OWNER_ATTRIBUTE not in LDAP_PERSON_ATTRIBUTES:
+        LDAP_PERSON_ATTRIBUTES.append(LDAP_OWNER_ATTRIBUTE)
 
     LDAP_ADMIN_GROUP_DN = os.environ.get("LDAP_ADMIN_GROUP_DN")
     LDAP_EDITOR_GROUP_DN = os.environ.get("LDAP_EDITOR_GROUP_DN")

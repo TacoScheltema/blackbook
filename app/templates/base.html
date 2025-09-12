@@ -42,7 +42,7 @@
                     {% block navbar_buttons %}{% endblock %}
 
                     <!-- Import from Google Button -->
-                    {% if config.ENABLE_GOOGLE_CONTACTS_IMPORT and current_user.auth_source == 'google' and (current_user.is_admin or current_user.is_editor) %}
+                    {% if config.ENABLE_GOOGLE_CONTACTS_IMPORT and (current_user.is_admin or current_user.is_editor) %}
                     <a href="{{ url_for('main.import_google_contacts') }}" class="btn btn-outline-light me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Import from Google">
                         <i class="bi bi-google"></i>
                     </a>

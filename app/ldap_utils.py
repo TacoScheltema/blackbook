@@ -332,3 +332,48 @@ def delete_ldap_contact(dn):
     finally:
         if conn:
             conn.unbind()
+
+
+def ensure_ou_exists(ou_dn):
+    """Checks if an OU exists and creates it if it doesn't."""
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+    try:
+        # Check if the OU already exists
+        if conn.search(ou_dn, "(objectClass=organizationalUnit)", search_scope=ldap3.BASE):
+            return True
+
+        # If not, create it
+        success = conn.add(ou_dn, "organizationalUnit")
+        if not success:
+            flash(f"Failed to create organizational unit: {conn.result['description']}", "danger")
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred while ensuring OU exists: {e}", "danger")
+        return False
+    finally:
+        if conn:
+            conn.unbind()
+
+
+def move_ldap_entry(old_dn, new_parent_dn):
+    """Moves an LDAP entry to a new parent DN."""
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+    try:
+        # Extract the RDN (e.g., "cn=Test User") from the old DN
+        rdn = old_dn.split(",")[0]
+        success = conn.modify_dn(old_dn, rdn, new_superior=new_parent_dn)
+        if not success:
+            flash(f"Failed to move contact: {conn.result['description']}", "danger")
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred while moving the contact: {e}", "danger")
+        return False
+    finally:
+        if conn:
+            conn.unbind()
