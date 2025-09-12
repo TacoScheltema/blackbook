@@ -17,7 +17,7 @@
 # Author: Taco Scheltema <github@scheltema.me>
 #
 
-# Version: 0.34
+# Version: 0.36
 
 import base64
 import json
@@ -757,7 +757,6 @@ def generate_import_stream(token, app, user_id, privacy):  # pylint: disable=too
     skipped_count = 0
     owner_attr = app.config["LDAP_OWNER_ATTRIBUTE"]
     object_classes = app.config["LDAP_PERSON_OBJECT_CLASS"].split(",")
-    public_dn_template = app.config["LDAP_CONTACT_DN_TEMPLATE"]
 
     if privacy == "private":
         private_ou_template = app.config["LDAP_PRIVATE_OU_TEMPLATE"]
@@ -823,10 +822,9 @@ def generate_import_stream(token, app, user_id, privacy):  # pylint: disable=too
             attributes[owner_attr] = str(user_id)
             new_uid = str(uuid.uuid4())
             attributes["uid"] = new_uid
-            new_dn = public_dn_template.format(uid=new_uid, cn=attributes["cn"])
 
-            if privacy == "private":
-                new_dn = f"cn={attributes['cn']},{search_base}"
+            rdn = f"uid={new_uid}"
+            new_dn = f"{rdn},{search_base}"
 
             if add_ldap_entry(new_dn, object_classes, {k: v for k, v in attributes.items() if v}):
                 imported_count += 1

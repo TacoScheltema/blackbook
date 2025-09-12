@@ -202,7 +202,14 @@ def search_ldap(filter_str, attributes, size_limit=0, search_base=None):
         search_base = current_app.config["LDAP_BASE_DN"]
 
     try:
-        conn.search(search_base=search_base, search_filter=filter_str, attributes=attributes, size_limit=size_limit)
+        # The corrected line with the added search_scope
+        conn.search(
+            search_base=search_base,
+            search_filter=filter_str,
+            search_scope=ldap3.LEVEL,  # <-- This is the fix
+            attributes=attributes,
+            size_limit=size_limit,
+        )
         results = []
         for entry in conn.entries:
             result_dict = {"dn": entry.entry_dn}

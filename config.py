@@ -44,6 +44,7 @@ class Config:
     LDAP_BASE_DN = os.environ.get("LDAP_BASE_DN", "dc=example,dc=com")
     LDAP_USER_DN_TEMPLATE = os.environ.get("LDAP_USER_DN_TEMPLATE", "uid={username},ou=users,dc=example,dc=com")
     LDAP_CONTACT_DN_TEMPLATE = os.environ.get("LDAP_CONTACT_DN_TEMPLATE", "cn={cn},ou=contacts,dc=example,dc=com")
+    LDAP_PRIVATE_OU_TEMPLATE = os.environ.get("LDAP_PRIVATE_OU_TEMPLATE", "ou=user_{user_id},dc=example,dc=com")
     LDAP_USE_SSL = os.environ.get("LDAP_USE_SSL", "False").lower() in ("true", "1", "t")
 
     # Filter to apply when searching for contacts
@@ -77,7 +78,6 @@ class Config:
         "1",
         "t",
     )
-    ENABLE_PRIVATE_CONTACTS = os.environ.get("ENABLE_PRIVATE_CONTACTS", "False").lower() in ("true", "1", "t")
     LDAP_OWNER_ATTRIBUTE = os.environ.get("LDAP_OWNER_ATTRIBUTE", "employeeNumber")
 
     # Ensure the owner attribute is always fetched from LDAP for filtering
