@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import current_app
 from flask_login import UserMixin
+from sqlalchemy.types import DateTime, TypeDecorator
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db, login_manager
@@ -30,6 +31,28 @@ from app import db, login_manager
 @login_manager.user_loader
 def load_user(id):
     return db.session.get(User, int(id))
+
+
+class AwareDateTime(TypeDecorator):
+    impl = DateTime
+    cache_ok = True  # recommended for SQLAlchemy 1.4+ performance
+
+    def process_bind_param(self, value, dialect):
+        """Called when saving to DB."""
+        if value is None:
+            return value
+        if value.tzinfo is None:
+            # assume naive datetime is UTC
+            value = value.replace(tzinfo=timezone.utc)
+        # convert to naive UTC for DB storage
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+    def process_result_value(self, value, dialect):
+        """Called when loading from DB."""
+        if value is None:
+            return value
+        # reattach UTC tzinfo
+        return value.replace(tzinfo=timezone.utc)
 
 
 class User(UserMixin, db.Model):
@@ -48,7 +71,7 @@ class User(UserMixin, db.Model):
 
     # New fields for password reset tokens
     password_reset_token = db.Column(db.String(32), index=True, unique=True)
-    password_reset_expiration = db.Column(db.DateTime(timezone=True))
+    password_reset_expiration = db.Column(AwareDateTime(), nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

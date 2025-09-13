@@ -93,7 +93,7 @@ def test_add_ldap_user(client, mocker, admin_user):
     THEN check that the user is created in the database and LDAP
     """
     login(client, admin_user.username, "password")
-    mock_add_ldap_user = mocker.patch("app.main.routes.add_ldap_user", return_value=True)
+    mock_add_ldap_user = mocker.patch("app.main.admin_routes.add_ldap_user", return_value=True)
     form_data = {
         "auth_type": "ldap",
         "username": "newldap",
@@ -131,7 +131,7 @@ def test_force_reset_password(client, mocker, admin_user, test_user):
     THEN check that a reset email is sent
     """
     login(client, admin_user.username, "password")
-    mock_send_email = mocker.patch("app.main.routes.send_password_reset_email")
+    mock_send_email = mocker.patch("app.main.admin_routes.send_password_reset_email")
     response = client.post(f"/admin/force_reset/{test_user.id}", follow_redirects=True)
     assert response.status_code == 200
     assert f"A password reset link has been sent to {test_user.email}.".encode("utf-8") in response.data

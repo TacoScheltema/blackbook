@@ -52,11 +52,12 @@ def test_companies_page(client, mocker, test_user):
     """
     login(client, test_user.username, "password")
     sample_people = [
-        {"cn": ["Test User 1"], "o": ["Company A"]},
-        {"cn": ["Test User 2"], "o": ["Company B"]},
-        {"cn": ["Test User 3"], "o": ["Company A"]},
+        {"dn": "cn=User 1,dc=example,dc=com", "cn": ["Test User 1"], "o": ["Company A"]},
+        {"dn": "cn=User 2,dc=example,dc=com", "cn": ["Test User 2"], "o": ["Company B"]},
+        {"dn": "cn=User 3,dc=example,dc=com", "cn": ["Test User 3"], "o": ["Company A"]},
     ]
     mocker.patch("app.cache.get", return_value=sample_people)
+    mocker.patch("app.main.helpers.search_ldap", return_value=[])
 
     response = client.get("/companies")
     assert response.status_code == 200
