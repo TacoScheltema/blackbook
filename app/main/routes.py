@@ -23,7 +23,7 @@ import requests
 from flask import Response, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 
-from app import oauth, scheduler
+from app import cache, oauth, scheduler
 from app.ldap_utils import (
     add_ldap_entry,
     delete_ldap_contact,
@@ -36,6 +36,7 @@ from app.main import bp
 from app.main.avatar_generator import generate_avatar
 from app.main.countries import countries
 from app.main.helpers import (
+    get_config,
     build_ldap_changes,
     editor_required,
     filter_and_sort_people,
@@ -54,7 +55,7 @@ def index():
     args = get_index_request_args()
     all_visible_contacts = get_visible_contacts()
     filtered_people = filter_and_sort_people(all_visible_contacts, args)
-
+    print(f'------\nIs admin: {current_user.is_admin}\n------')
     total_people = len(filtered_people)
     start_index = (args["page"] - 1) * args["page_size"]
     end_index = start_index + args["page_size"]
@@ -77,6 +78,7 @@ def index():
         sort_order=args["sort_order"],
         alphabet=alphabet,
         letter=args["letter"],
+        current_user=current_user,
     )
 
 
@@ -308,7 +310,15 @@ END:VCARD"""
 @editor_required
 def add_person():
     """Handles creation of a new person entry."""
+    all_people = get_visible_contacts() or []
+    company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
     company_employees = {}
+    for person in all_people:
+        company = (person.get(company_link_attr) or [None])[0]
+        if company:
+            if company not in company_employees:
+                company_employees[company] = []
+            company_employees[company].append({"cn": person["cn"][0], "dn": person["dn"]})
     if request.method == "POST":
         attributes = {
             attr: request.form.get(attr)
@@ -351,6 +361,17 @@ def edit_person(b64_dn):
     if not current_person:
         abort(404)
 
+    potential_managers = []
+    company_link_attr = get_config("LDAP_COMPANY_LINK_ATTRIBUTE")
+    person_company = (current_person.get(company_link_attr) or [None])[0]
+    if person_company:
+        all_people = get_visible_contacts() or []
+        potential_managers = [
+            p
+            for p in all_people
+            if p.get(company_link_attr) and p[company_link_attr][0] == person_company and p["dn"] != dn
+        ]
+
     if request.method == "POST":
         changes = build_ldap_changes(request.form, current_person, person_attrs)
         if not changes:
@@ -367,7 +388,7 @@ def edit_person(b64_dn):
 
     person_name = current_person.get("cn", ["Unknown"])[0]
     return render_template(
-        "edit_person.html", title=f"Edit {person_name}", person=current_person, b64_dn=b64_dn, countries=countries
+        "edit_person.html", title=f"Edit {person_name}", person=current_person, potential_managers=potential_managers, b64_dn=b64_dn, countries=countries
     )
 
 

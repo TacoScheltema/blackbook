@@ -17,7 +17,6 @@
                 </div>
             </div>
             <form action="{{ url_for('main.add_person') }}" method="post" id="add-form">
-                <input type="hidden" name="jpegPhoto" id="jpegPhoto">
                 <div class="row mt-3">
                     {# Loop through the configured attribute map to dynamically create the form. #}
                     {% for attr_name, display_name in config.LDAP_ATTRIBUTE_MAP.items() %}
@@ -45,7 +44,7 @@
                                 {% endfor %}
                             </select>
                         {% elif attr_name == 'jpegPhoto' %}
-                            <input type="file" class="form-control" id="photo-upload" accept="image/jpeg">
+                            <input type="text" class="form-control" id="{{ attr_name }}" name="{{ attr_name }}" disabled value="Photo upload available once contact is created">
                         {% else %}
                             {% set input_type = 'text' %}
                             {% if attr_name == 'mail' %}{% set input_type = 'email' %}{% endif %}
@@ -65,56 +64,6 @@
 </div>
 
 <script>
-document.getElementById('photo-upload').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (!file || file.type !== 'image/jpeg' || file.size > 2 * 1024 * 1024) {
-        alert('Please select a JPEG image smaller than 2MB.');
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-
-            // Resize the image
-            const MAX_WIDTH = 800;
-            const MAX_HEIGHT = 800;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-            } else {
-                if (height > MAX_HEIGHT) {
-                    width *= MAX_HEIGHT / height;
-                    height = MAX_HEIGHT;
-                }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Compress the image
-            let quality = 0.9;
-            let dataUrl;
-            do {
-                dataUrl = canvas.toDataURL('image/jpeg', quality);
-                quality -= 0.1;
-            } while (dataUrl.length > 200 * 1024 && quality > 0.1);
-
-            document.getElementById('jpegPhoto').value = dataUrl.split(',')[1];
-        }
-        img.src = e.target.result;
-    }
-    reader.readAsDataURL(file);
-});
-
 const companyEmployees = {{ company_employees|tojson|safe }};
 
 function updateManagerOptions() {
