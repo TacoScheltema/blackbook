@@ -20,8 +20,10 @@ import time
 import uuid
 
 import requests
+from authlib.integrations.base_client.errors import OAuthError
 from flask import Response, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
+from requests.exceptions import RequestException
 
 from app import oauth, scheduler
 from app.ldap_utils import (
@@ -36,11 +38,11 @@ from app.main import bp
 from app.main.avatar_generator import generate_avatar
 from app.main.countries import countries
 from app.main.helpers import (
-    get_config,
     build_ldap_changes,
     editor_required,
     filter_and_sort_people,
     generate_import_stream,
+    get_config,
     get_index_request_args,
     get_pagination_params,
     get_visible_contacts,
@@ -447,9 +449,16 @@ def google_import_callback():
     """Callback route for Google Contacts import."""
     try:
         session["google_import_token"] = oauth.google.authorize_access_token()
-    except Exception as e:
-        flash(f"Authorization with Google failed: {e}", "danger")
+    except OAuthError as e:
+        # This catches errors specific to the OAuth2 flow,
+        # like an invalid grant or the user denying permission.
+        flash(f"Authorization error with Google: {e.description}", "danger")
         return redirect(url_for("main.index"))
+    except RequestException as e:
+        # This catches network-related errors, like a timeout or DNS failure.
+        flash(f"Could not connect to Google's servers. Please try again later. Error: {e}", "danger")
+        return redirect(url_for("main.index"))
+
     return redirect(url_for("main.import_status"))
 
 

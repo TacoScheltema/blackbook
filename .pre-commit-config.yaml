@@ -21,9 +21,9 @@ repos:
     hooks:
     -   id: flake8
         args: [--max-line-length=120]
-#-   repo: https://github.com/pylint-dev/pylint
-#    rev: v3.1.0
-#    hooks:
-#    -   id: pylint
-#        args: [--rcfile=pyproject.toml]
-#        additional_dependencies: [pytest, flask, python-dotenv, ldap3, gunicorn, Flask-Caching, Flask-Login, Flask-SQLAlchemy, Authlib, Werkzeug, Requests, Flask-Migrate, APScheduler, Flask-Mail, svgwrite]
+-   repo: https://github.com/pylint-dev/pylint
+    rev: v3.1.0
+    hooks:
+    -   id: pylint
+        args: [--rcfile=pyproject.toml]
+        additional_dependencies: [pytest, flask, python-dotenv, ldap3, gunicorn, Flask-Caching, Flask-Login, Flask-SQLAlchemy, Authlib, Werkzeug, Requests, Flask-Migrate, APScheduler, Flask-Mail, svgwrite]

@@ -33,26 +33,46 @@ def load_user(id):
     return db.session.get(User, int(id))
 
 
-class AwareDateTime(TypeDecorator):
+class AwareDateTime(TypeDecorator):  # pylint: disable=too-many-ancestors
+    """
+    A custom SQLAlchemy type to ensure all datetimes are timezone-aware (UTC).
+    Stores naive UTC datetimes in the database and returns aware UTC datetimes.
+    """
+
     impl = DateTime
-    cache_ok = True  # recommended for SQLAlchemy 1.4+ performance
+    cache_ok = True
+
+    @property
+    def python_type(self):
+        """Returns the Python type expected by this column."""
+        return datetime
 
     def process_bind_param(self, value, dialect):
-        """Called when saving to DB."""
+        """Called when saving to the DB."""
         if value is None:
             return value
         if value.tzinfo is None:
-            # assume naive datetime is UTC
+            # Assume naive datetime is UTC
             value = value.replace(tzinfo=timezone.utc)
-        # convert to naive UTC for DB storage
+        # Convert to naive UTC for DB storage
         return value.astimezone(timezone.utc).replace(tzinfo=None)
 
     def process_result_value(self, value, dialect):
-        """Called when loading from DB."""
+        """Called when loading from the DB."""
         if value is None:
             return value
-        # reattach UTC tzinfo
+        # Reattach UTC tzinfo
         return value.replace(tzinfo=timezone.utc)
+
+    def process_literal_param(self, value, dialect):
+        """
+        Allows the type to be used in SQL expressions and default values
+        in migration scripts (e.g., Alembic).
+        """
+        if value is None:
+            return "NULL"
+        # Delegate the formatting to the underlying DateTime type
+        return self.impl.process_literal_param(value, dialect)
 
 
 class User(UserMixin, db.Model):
