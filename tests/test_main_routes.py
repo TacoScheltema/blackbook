@@ -232,7 +232,7 @@ def test_add_person_page_post(client, mocker, editor_user):
         "givenName": "New",
         "mail": "new@example.com",
         "c": "Australia",
-        "manager": "dn=uid=ac0e2ac5-14a0-4c11-a063-981d6d1e97e4,ou=contacts,dc=example,dc=com"
+        "manager": "dn=uid=ac0e2ac5-14a0-4c11-a063-981d6d1e97e4,ou=contacts,dc=example,dc=com",
     }
 
     response = client.post("/person/add", data=form_data)
