@@ -23,7 +23,7 @@ import requests
 from flask import Response, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 
-from app import cache, oauth, scheduler
+from app import oauth, scheduler
 from app.ldap_utils import (
     add_ldap_entry,
     delete_ldap_contact,
@@ -388,7 +388,12 @@ def edit_person(b64_dn):
 
     person_name = current_person.get("cn", ["Unknown"])[0]
     return render_template(
-        "edit_person.html", title=f"Edit {person_name}", person=current_person, potential_managers=potential_managers, b64_dn=b64_dn, countries=countries
+        "edit_person.html",
+        title=f"Edit {person_name}",
+        person=current_person,
+        potential_managers=potential_managers,
+        b64_dn=b64_dn,
+        countries=countries,
     )
 
 
