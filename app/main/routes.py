@@ -55,7 +55,7 @@ def index():
     args = get_index_request_args()
     all_visible_contacts = get_visible_contacts()
     filtered_people = filter_and_sort_people(all_visible_contacts, args)
-    print(f'------\nIs admin: {current_user.is_admin}\n------')
+    print(f"------\nIs admin: {current_user.is_admin}\n------")
     total_people = len(filtered_people)
     start_index = (args["page"] - 1) * args["page_size"]
     end_index = start_index + args["page_size"]
