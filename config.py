@@ -14,7 +14,7 @@
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# Author: Taco Scheltema <github@scheltema.me>
+# Author: Taco Scheltema https://github.com/TacoScheltema/blackbook
 #
 
 import os
@@ -44,6 +44,7 @@ class Config:
     LDAP_BASE_DN = os.environ.get("LDAP_BASE_DN", "dc=example,dc=com")
     LDAP_USER_DN_TEMPLATE = os.environ.get("LDAP_USER_DN_TEMPLATE", "uid={username},ou=users,dc=example,dc=com")
     LDAP_CONTACT_DN_TEMPLATE = os.environ.get("LDAP_CONTACT_DN_TEMPLATE", "cn={cn},ou=contacts,dc=example,dc=com")
+    LDAP_PRIVATE_OU_TEMPLATE = os.environ.get("LDAP_PRIVATE_OU_TEMPLATE", "ou=user_{user_id},dc=example,dc=com")
     LDAP_USE_SSL = os.environ.get("LDAP_USE_SSL", "False").lower() in ("true", "1", "t")
 
     # Filter to apply when searching for contacts
@@ -70,6 +71,19 @@ class Config:
     # --- Authentication Configuration ---
     ENABLE_LOCAL_LOGIN = os.environ.get("ENABLE_LOCAL_LOGIN", "True").lower() in ("true", "1", "t")
     ENABLE_LDAP_LOGIN = os.environ.get("ENABLE_LDAP_LOGIN", "True").lower() in ("true", "1", "t")
+
+    # --- Feature Toggles ---
+    ENABLE_GOOGLE_CONTACTS_IMPORT = os.environ.get("ENABLE_GOOGLE_CONTACTS_IMPORT", "False").lower() in (
+        "true",
+        "1",
+        "t",
+    )
+    LDAP_OWNER_ATTRIBUTE = os.environ.get("LDAP_OWNER_ATTRIBUTE", "employeeNumber")
+
+    # Ensure the owner attribute is always fetched from LDAP for filtering
+    if LDAP_OWNER_ATTRIBUTE not in LDAP_PERSON_ATTRIBUTES:
+        LDAP_PERSON_ATTRIBUTES.append(LDAP_OWNER_ATTRIBUTE)
+
     LDAP_ADMIN_GROUP_DN = os.environ.get("LDAP_ADMIN_GROUP_DN")
     LDAP_EDITOR_GROUP_DN = os.environ.get("LDAP_EDITOR_GROUP_DN")
 
@@ -77,8 +91,6 @@ class Config:
     # Google
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
-    GOOGLE_ADMIN_GROUP = os.environ.get("GOOGLE_ADMIN_GROUP")
-    GOOGLE_EDITOR_GROUP = os.environ.get("GOOGLE_EDITOR_GROUP")
 
     # Keycloak
     KEYCLOAK_CLIENT_ID = os.environ.get("KEYCLOAK_CLIENT_ID")

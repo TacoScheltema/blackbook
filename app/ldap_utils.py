@@ -14,7 +14,7 @@
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# Author: Taco Scheltema <github@scheltema.me>
+# Author: Taco Scheltema https://github.com/TacoScheltema/blackbook
 #
 
 import base64
@@ -202,7 +202,14 @@ def search_ldap(filter_str, attributes, size_limit=0, search_base=None):
         search_base = current_app.config["LDAP_BASE_DN"]
 
     try:
-        conn.search(search_base=search_base, search_filter=filter_str, attributes=attributes, size_limit=size_limit)
+        # The corrected line with the added search_scope
+        conn.search(
+            search_base=search_base,
+            search_filter=filter_str,
+            search_scope=ldap3.LEVEL,  # <-- This is the fix
+            attributes=attributes,
+            size_limit=size_limit,
+        )
         results = []
         for entry in conn.entries:
             result_dict = {"dn": entry.entry_dn}
@@ -328,6 +335,51 @@ def delete_ldap_contact(dn):
         return True
     except LDAPException as e:
         flash(f"An exception occurred during contact deletion: {e}", "danger")
+        return False
+    finally:
+        if conn:
+            conn.unbind()
+
+
+def ensure_ou_exists(ou_dn):
+    """Checks if an OU exists and creates it if it doesn't."""
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+    try:
+        # Check if the OU already exists
+        if conn.search(ou_dn, "(objectClass=organizationalUnit)", search_scope=ldap3.BASE):
+            return True
+
+        # If not, create it
+        success = conn.add(ou_dn, "organizationalUnit")
+        if not success:
+            flash(f"Failed to create organizational unit: {conn.result['description']}", "danger")
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred while ensuring OU exists: {e}", "danger")
+        return False
+    finally:
+        if conn:
+            conn.unbind()
+
+
+def move_ldap_entry(old_dn, new_parent_dn):
+    """Moves an LDAP entry to a new parent DN."""
+    conn = get_ldap_connection()
+    if not conn:
+        return False
+    try:
+        # Extract the RDN (e.g., "cn=Test User") from the old DN
+        rdn = old_dn.split(",")[0]
+        success = conn.modify_dn(old_dn, rdn, new_superior=new_parent_dn)
+        if not success:
+            flash(f"Failed to move contact: {conn.result['description']}", "danger")
+            return False
+        return True
+    except LDAPException as e:
+        flash(f"An exception occurred while moving the contact: {e}", "danger")
         return False
     finally:
         if conn:

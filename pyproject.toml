@@ -7,6 +7,8 @@ line_length = 120
 
 [tool.pylint.main]
 max-line-length = 120
+max-branches = 16
+max-statements = 70
 init-hook = 'import sys; sys.path.append(".")'
 disable = [
     "C0114", # missing-module-docstring

@@ -1,0 +1,22 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card card-margin">
+    <div class="card-header bg-dark text-white">
+        <h1 class="my-2">Import Privacy</h1>
+    </div>
+    <div class="card-body text-center">
+        <p class="lead">How would you like to import your Google Contacts?</p>
+        <p class="text-muted">You can change a contact's privacy at any time after importing.</p>
+        <div class="d-grid gap-2 col-6 mx-auto mt-4">
+            <a href="{{ url_for('main.authorize_google_import', privacy='private') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-person-lock me-2"></i> Import as Private
+            </a>
+            <a href="{{ url_for('main.authorize_google_import', privacy='public') }}" class="btn btn-secondary btn-lg">
+                <i class="bi bi-people me-2"></i> Import as Public
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

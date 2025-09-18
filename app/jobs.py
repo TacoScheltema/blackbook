@@ -14,7 +14,7 @@
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# Author: Taco Scheltema <github@scheltema.me>
+# Author: Taco Scheltema https://github.com/TacoScheltema/blackbook
 #
 
 from app import cache

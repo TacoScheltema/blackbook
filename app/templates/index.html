@@ -118,11 +118,16 @@
                                     </a>
                                 {% endif %}
                             </td>
+                            <td class="align-middle text-center">
+                                {% if person.is_private %}
+                                    <i class="bi bi-person-lock" data-bs-toggle="tooltip" data-bs-placement="top" title="Only visible to you"></i>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="4" class="text-center p-4">No persons found.</td>
+                            <td colspan="5" class="text-center p-4">No persons found.</td>
                         </tr>
                     {% endif %}
                 </tbody>

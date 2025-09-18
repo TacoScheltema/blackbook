@@ -14,7 +14,7 @@
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# Author: Taco Scheltema <github@scheltema.me>
+# Author: Taco Scheltema https://github.com/TacoScheltema/blackbook
 #
 
 #
@@ -39,7 +39,7 @@ def create_admin():
         print("Creating default admin user...")
         admin_user = User(
             username="admin",
-            email="admin@example.com",
+            email="",
             auth_source="local",
             password_reset_required=True,
             is_admin=True,  # The default admin is always an admin

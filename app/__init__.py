@@ -14,7 +14,7 @@
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# Author: Taco Scheltema <github@scheltema.me>
+# Author: Taco Scheltema https://github.com/TacoScheltema/blackbook
 #
 
 import atexit
@@ -79,7 +79,7 @@ def create_app(config_class=Config):
             client_id=app.config["GOOGLE_CLIENT_ID"],
             client_secret=app.config["GOOGLE_CLIENT_SECRET"],
             server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-            client_kwargs={"scope": "openid email profile"},
+            client_kwargs={"scope": "openid email profile https://www.googleapis.com/auth/contacts.readonly"},
         )
     if app.config["KEYCLOAK_CLIENT_ID"] and app.config["KEYCLOAK_SERVER_URL"]:
         oauth.register(
@@ -110,9 +110,11 @@ def create_app(config_class=Config):
     # Register blueprints
     from app.auth import bp as auth_bp
     from app.main import bp as main_bp
+    from app.main.admin_routes import admin_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
 
     @app.before_request
     def before_request_hook():

@@ -41,18 +41,25 @@
 
                     {% block navbar_buttons %}{% endblock %}
 
+                    <!-- Import from Google Button -->
+                    {% if config.ENABLE_GOOGLE_CONTACTS_IMPORT and (current_user.is_admin or current_user.is_editor) %}
+                    <a href="{{ url_for('main.import_google_contacts') }}" class="btn btn-outline-light me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Import from Google">
+                        <i class="bi bi-google"></i>
+                    </a>
+                    {% endif %}
+
                     <!-- Spacer -->
                     <div class="me-auto"></div>
 
                     <!-- Admin Button -->
                     {% if current_user.is_admin %}
-                    <a href="{{ url_for('main.admin_users') }}" class="btn {% if request.endpoint == 'main.admin_users' %}btn-light{% else %}btn-outline-light{% endif %} me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Admin">
+                    <a href="{{ url_for('admin.admin_users') }}" class="btn {% if request.endpoint == 'admin.admin_users' %}btn-light{% else %}btn-outline-light{% endif %} me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Admin">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-badge" viewBox="0 0 16 16">
                           <path d="M6.5 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
                           <path d="M4.5 0A2.5 2.5 0 0 0 2 2.5V14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2.5A2.5 2.5 0 0 0 11.5 0h-7zM3 2.5A1.5 1.5 0 0 1 4.5 1h7A1.5 1.5 0 0 1 13 2.5v10.795a4.2 4.2 0 0 0-.776-.492C11.392 12.387 10.063 12 8 12s-3.392.387-4.224.803a4.2 4.2 0 0 0-.776.492V2.5z"/>
                         </svg>
                     </a>
-                    <a href="{{ url_for('main.admin_cache') }}" class="btn {% if request.endpoint == 'main.admin_cache' %}btn-light{% else %}btn-outline-light{% endif %} me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Cache Status">
+                    <a href="{{ url_for('admin.admin_cache') }}" class="btn {% if request.endpoint == 'admin.admin_cache' %}btn-light{% else %}btn-outline-light{% endif %} me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Cache Status">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
                           <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
                           <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>

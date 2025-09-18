@@ -12,11 +12,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
-
-#
-# Author: Taco Scheltema <github@scheltema.me>
-#
-
 import pprint
 from urllib.parse import urlparse
 
@@ -47,7 +42,7 @@ def _handle_ldap_login(username, password):
         return None
 
     user = User.query.filter_by(username=username, auth_source="ldap").first()
-    if not user:
+    if user is None:
         user = User(username=username, auth_source="ldap", is_admin=is_admin, is_editor=is_editor)
         db.session.add(user)
     else:
@@ -59,32 +54,16 @@ def _handle_ldap_login(username, password):
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
+    """Handles user login."""
     if current_user.is_authenticated:
         return redirect(url_for("main.index"))
 
-    # --- Logic for auto-redirecting if only one SSO is enabled ---
-    sso_providers = []
-    if current_app.config["GOOGLE_CLIENT_ID"]:
-        sso_providers.append("google")
-    if current_app.config["KEYCLOAK_CLIENT_ID"]:
-        sso_providers.append("keycloak")
-    if current_app.config["AUTHENTIK_CLIENT_ID"]:
-        sso_providers.append("authentik")
-
-    local_enabled = current_app.config["ENABLE_LOCAL_LOGIN"]
-    ldap_enabled = current_app.config["ENABLE_LDAP_LOGIN"]
-
-    # If only one SSO is enabled and local/ldap are disabled, redirect immediately
-    if not local_enabled and not ldap_enabled and len(sso_providers) == 1:
-        return redirect(url_for("auth.sso_login", provider=sso_providers[0]))
-    # --- End of new logic ---
-
     if request.method == "POST":
-        auth_type = request.form.get("auth_type")
         username = request.form.get("username")
         password = request.form.get("password")
-
+        auth_type = request.form.get("auth_type")
         user = None
+
         if auth_type == "local":
             user = _handle_local_login(username, password)
         elif auth_type == "ldap":
@@ -97,44 +76,14 @@ def login():
                 next_page = url_for("main.index")
             return redirect(next_page)
 
-        return redirect(url_for("auth.login"))
-
     return render_template("auth/login.html", title="Sign In")
 
 
 @bp.route("/logout")
 def logout():
+    """Handles user logout."""
     logout_user()
-    return redirect(url_for("main.index"))
-
-
-@bp.route("/reset-password", methods=["GET", "POST"])
-@login_required
-def reset_password():
-    if not current_user.password_reset_required:
-        return redirect(url_for("main.index"))
-
-    if request.method == "POST":
-        password = request.form.get("password")
-        password2 = request.form.get("password2")
-
-        if not password or password != password2:
-            flash("Passwords do not match or are empty.", "warning")
-            return redirect(url_for("auth.reset_password"))
-
-        if current_user.auth_source == "local":
-            current_user.set_password(password)
-        elif current_user.auth_source == "ldap":
-            if not set_ldap_password(current_user.username, password):
-                flash("Failed to update LDAP password.", "danger")
-                return redirect(url_for("auth.reset_password"))
-
-        current_user.password_reset_required = False
-        db.session.commit()
-        flash("Your password has been reset successfully.", "success")
-        return redirect(url_for("main.index"))
-
-    return render_template("auth/reset_password.html", title="Reset Password")
+    return redirect(url_for("auth.login"))
 
 
 @bp.route("/request-password-reset", methods=["GET", "POST"])
@@ -147,11 +96,9 @@ def request_password_reset():
         if user:
             send_password_reset_email(user)
             db.session.commit()
-            flash("Check your email for the instructions to reset your password", "info")
-        else:
-            flash("No user found with that email address.", "warning")
+        flash("Check your email for the instructions to reset your password", "info")
         return redirect(url_for("auth.login"))
-    return render_template("auth/request_reset_password.html", title="Request Password Reset")
+    return render_template("auth/request_reset_password.html", title="Reset Password")
 
 
 @bp.route("/reset-password/<token>", methods=["GET", "POST"])
@@ -160,35 +107,47 @@ def reset_password_token(token):
         return redirect(url_for("main.index"))
     user = User.verify_reset_password_token(token)
     if not user:
-        flash("The password reset link is invalid or has expired.", "warning")
-        return redirect(url_for("auth.login"))
-
+        return redirect(url_for("main.index"))
     if request.method == "POST":
         password = request.form.get("password")
         password2 = request.form.get("password2")
-
-        if not password or password != password2:
-            flash("Passwords do not match or are empty.", "warning")
+        if password != password2:
+            flash("Passwords do not match.", "danger")
             return redirect(url_for("auth.reset_password_token", token=token))
-
-        if user.auth_source == "local":
-            user.set_password(password)
-        elif user.auth_source == "ldap":
+        if user.auth_source == "ldap":
             if not set_ldap_password(user.username, password):
                 flash("Failed to update LDAP password.", "danger")
-                return redirect(url_for("auth.reset_password_token", token=token))
-
+                return redirect(url_for("auth.login"))
+        user.set_password(password)
         user.password_reset_token = None
         user.password_reset_expiration = None
-        user.password_reset_required = False
         db.session.commit()
-        flash("Your password has been reset successfully.", "success")
+        flash("Your password has been reset.", "success")
         return redirect(url_for("auth.login"))
+    return render_template("auth/reset_password_token.html", title="Reset Password")
 
-    return render_template("auth/reset_password_token.html", title="Reset Your Password", token=token)
 
-
-# --- SSO Login Routes ---
+@bp.route("/reset-password", methods=["GET", "POST"])
+@login_required
+def reset_password():
+    if not current_user.password_reset_required:
+        return redirect(url_for("main.index"))
+    if request.method == "POST":
+        password = request.form.get("password")
+        password2 = request.form.get("password2")
+        if password != password2:
+            flash("Passwords do not match.", "danger")
+            return redirect(url_for("auth.reset_password"))
+        if current_user.auth_source == "ldap":
+            if not set_ldap_password(current_user.username, password):
+                flash("Failed to update LDAP password.", "danger")
+                return redirect(url_for("auth.reset_password"))
+        current_user.set_password(password)
+        current_user.password_reset_required = False
+        db.session.commit()
+        flash("Your password has been reset.", "success")
+        return redirect(url_for("main.index"))
+    return render_template("auth/reset_password.html", title="Reset Password")
 
 
 @bp.route("/login/<provider>")
@@ -215,31 +174,35 @@ def authorize(provider):
             print("---------------------------")
 
         sso_user_id = user_info["sub"]
-        user = User.query.filter_by(username=sso_user_id, auth_source="sso").first()
+        user = User.query.filter_by(username=sso_user_id, auth_source=provider).first()
 
-        # Check for admin group membership from SSO provider
         is_admin = False
-        admin_group = current_app.config.get(f"{provider.upper()}_ADMIN_GROUP")
-        if admin_group and "groups" in user_info and admin_group in user_info["groups"]:
-            is_admin = True
-
         is_editor = False
-        editor_group = current_app.config.get(f"{provider.upper()}_EDITOR_GROUP")
-        if editor_group and "groups" in user_info and editor_group in user_info["groups"]:
-            is_editor = True
+
+        # For non-Google providers, check for group membership to assign roles
+        if provider != "google":
+            admin_group = current_app.config.get(f"{provider.upper()}_ADMIN_GROUP")
+            if admin_group and "groups" in user_info and admin_group in user_info["groups"]:
+                is_admin = True
+
+            editor_group = current_app.config.get(f"{provider.upper()}_EDITOR_GROUP")
+            if editor_group and "groups" in user_info and editor_group in user_info["groups"]:
+                is_editor = True
 
         if not user:
             user = User(
                 username=sso_user_id,
                 email=user_info.get("email"),
-                auth_source="sso",
+                auth_source=provider,
                 is_admin=is_admin,
                 is_editor=is_editor,
             )
             db.session.add(user)
         else:
-            user.is_admin = is_admin
-            user.is_editor = is_editor
+            # For non-Google users, sync their roles on every login
+            if provider != "google":
+                user.is_admin = is_admin
+                user.is_editor = is_editor
 
         db.session.commit()
         login_user(user, remember=True)

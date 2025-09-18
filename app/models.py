@@ -14,7 +14,7 @@
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# Author: Taco Scheltema <github@scheltema.me>
+# Author: Taco Scheltema https://github.com/TacoScheltema/blackbook
 #
 
 import secrets
@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import current_app
 from flask_login import UserMixin
+from sqlalchemy.types import DateTime, TypeDecorator
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db, login_manager
@@ -30,6 +31,48 @@ from app import db, login_manager
 @login_manager.user_loader
 def load_user(id):
     return db.session.get(User, int(id))
+
+
+class AwareDateTime(TypeDecorator):  # pylint: disable=too-many-ancestors
+    """
+    A custom SQLAlchemy type to ensure all datetimes are timezone-aware (UTC).
+    Stores naive UTC datetimes in the database and returns aware UTC datetimes.
+    """
+
+    impl = DateTime
+    cache_ok = True
+
+    @property
+    def python_type(self):
+        """Returns the Python type expected by this column."""
+        return datetime
+
+    def process_bind_param(self, value, dialect):
+        """Called when saving to the DB."""
+        if value is None:
+            return value
+        if value.tzinfo is None:
+            # Assume naive datetime is UTC
+            value = value.replace(tzinfo=timezone.utc)
+        # Convert to naive UTC for DB storage
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+    def process_result_value(self, value, dialect):
+        """Called when loading from the DB."""
+        if value is None:
+            return value
+        # Reattach UTC tzinfo
+        return value.replace(tzinfo=timezone.utc)
+
+    def process_literal_param(self, value, dialect):
+        """
+        Allows the type to be used in SQL expressions and default values
+        in migration scripts (e.g., Alembic).
+        """
+        if value is None:
+            return "NULL"
+        # Delegate the formatting to the underlying DateTime type
+        return self.impl.process_literal_param(value, dialect)
 
 
 class User(UserMixin, db.Model):
@@ -48,7 +91,7 @@ class User(UserMixin, db.Model):
 
     # New fields for password reset tokens
     password_reset_token = db.Column(db.String(32), index=True, unique=True)
-    password_reset_expiration = db.Column(db.DateTime(timezone=True))
+    password_reset_expiration = db.Column(AwareDateTime(), nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
