@@ -29,7 +29,10 @@
             {% if employees %}
                 {% for person in employees %}
                 <div class="col-lg-4">
-                    <div class="card card-margin">
+                    <div class="card card-margin {% if person.is_private -%}bg-light{%- endif %}">
+                        <div class="card-header">
+                            <span class="widget-49-pro-title">{{ person.cn[0] if person.cn else 'Unknown' }}</span>
+                        </div>
                         <div class="card-body">
                             <div class="widget-49">
                                 <div class="widget-49-title-wrapper">
@@ -39,9 +42,7 @@
                                         {% elif config.ENABLE_GENERATED_AVATARS %}
                                             <img src="{{ url_for('main.avatar', seed=person.dn) }}" alt="Generated Avatar">
                                         {% else %}
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
-                                              <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
-                                            </svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16 <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/></svg>
                                         {% endif %}
                                     </div>
                                     <div class="widget-49-meeting-info">
@@ -70,19 +71,39 @@
                                     {% endif %}
                                 </ul>
                                 <div class="widget-49-meeting-action">
-                                    <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="View Profile">
-                                        <i class="bi bi-person-square"></i>
-                                    </a>
                                     {% if not config.READONLY and (current_user.is_admin or current_user.is_editor) %}
+                                    <form action="{{ url_for('main.delete_person', b64_dn=person.dn|b64encode) }}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete Person">
+                                        <i class="bi bi-person-x"></i>
+                                    </button>
+                                    </form>
                                     <a href="{{ url_for('main.edit_person', b64_dn=person.dn|b64encode) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Edit Person">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
-                                    <form action="{{ url_for('main.delete_person', b64_dn=person.dn|b64encode) }}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Delete Person">
-                                            <i class="bi bi-person-x"></i>
+
+                                    <!-- Toggle Privacy Buttons -->
+                                    {% if person.is_private %}
+                                    <form action="{{ url_for('main.toggle_contact_privacy', b64_dn=person.dn|b64encode) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Make Public">
+                                            <i class="bi bi-people"></i>
+                                        </button>
+                                    </form>
+                                    {% elif person[config.LDAP_OWNER_ATTRIBUTE] and person[config.LDAP_OWNER_ATTRIBUTE][0] == current_user.id|string %}
+                                    <form action="{{ url_for('main.toggle_contact_privacy', b64_dn=person.dn|b64encode) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Make Private">
+                                            <i class="bi bi-people-fill"></i>
                                         </button>
                                     </form>
                                     {% endif %}
+
+                                    {% endif %}
+
+                                    <a href="{{ url_for('main.person_detail', b64_dn=person.dn|b64encode) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="View Profile">
+                                        <i class="bi bi-person-square"></i>
+                                    </a>
+                                    <a href="{{ url_for('main.person_map', b64_dn=person.dn|b64encode) }}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Show on Map">
+                                        <i class="bi bi-geo-alt-fill"></i>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -97,4 +118,5 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
