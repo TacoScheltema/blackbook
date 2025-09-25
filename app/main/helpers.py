@@ -1,3 +1,4 @@
+# filename: app/main/helpers.py
 # This file is part of Blackbook.
 #
 # Blackbook is free software: you can redistribute it and/or modify
@@ -211,42 +212,48 @@ def _map_google_contact_to_ldap(person):
     return attributes
 
 
-def generate_import_stream(token, app, user_id, privacy):  # pylint: disable=too-many-locals
+def _process_and_add_contact(attributes, existing_names, existing_emails, search_base, app_config, user_id):
+    """Shared logic to check for duplicates and add a contact to LDAP."""
+    name = (attributes.get("cn") or "").lower()
+    email = (attributes.get("mail") or "").lower()
+
+    if (email and email in existing_emails) or (name and name in existing_names):
+        return "skipped", f"Skipping duplicate: {attributes.get('cn')}"
+
+    attributes[app_config["LDAP_OWNER_ATTRIBUTE"]] = str(user_id)
+    attributes["uid"] = str(uuid.uuid4())
+    rdn = f"uid={attributes['uid']}"
+    new_dn = f"{rdn},{search_base}"
+    object_classes = app_config["LDAP_PERSON_OBJECT_CLASS"].split(",")
+
+    if add_ldap_entry(new_dn, object_classes, {k: v for k, v in attributes.items() if v}):
+        if email:
+            existing_emails.add(email)
+        if name:
+            existing_names.add(name)
+        return "imported", f"Successfully imported: {attributes.get('cn')}"
+
+    return "failed", f"Failed to import: {attributes.get('cn')}"
+
+
+def generate_import_stream(token, app, user_id, privacy):
     """A generator function that performs the import and yields progress."""
     if not token:
         yield f"data: {json.dumps({'status': 'error', 'message': 'No token found.'})}\n\n"
         return
 
-    access_token = token.get("access_token")
-    headers = {"Authorization": f"Bearer {access_token}"}
-    all_connections = []
-    next_page_token = None
-
     try:
-        while True:
-            params = {"personFields": "names,emailAddresses,phoneNumbers,organizations,addresses", "pageSize": 1000}
-            if next_page_token:
-                params["pageToken"] = next_page_token
-            resp = requests.get(
-                "https://people.googleapis.com/v1/people/me/connections", headers=headers, params=params, timeout=15
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            all_connections.extend(data.get("connections", []))
-            next_page_token = data.get("nextPageToken")
-            if not next_page_token:
-                break
+        connections = _fetch_google_connections(token.get("access_token"))
     except requests.exceptions.RequestException as e:
         yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n\n"
         return
 
-    total = len(all_connections)
+    total = len(connections)
     if total == 0:
         yield f"data: {json.dumps({'status': 'complete', 'message': 'No contacts found.'})}\n\n"
         return
 
     imported_count, skipped_count = 0, 0
-    object_classes = app.config["LDAP_PERSON_OBJECT_CLASS"].split(",")
 
     with app.app_context():
         if privacy == "private":
@@ -258,28 +265,21 @@ def generate_import_stream(token, app, user_id, privacy):  # pylint: disable=too
         existing_emails = {p["mail"][0].lower() for p in existing if p.get("mail") and p["mail"][0]}
         existing_names = {p["cn"][0].lower() for p in existing if p.get("cn") and p["cn"][0]}
 
-    for i, person in enumerate(all_connections):
+    for i, person in enumerate(connections):
         with app.app_context():
             attributes = _map_google_contact_to_ldap(person)
             if not attributes:
                 skipped_count += 1
                 msg = "Skipping contact with no name."
             else:
-                name = attributes["cn"].lower()
-                email = (attributes.get("mail") or "").lower()
-                if (email and email in existing_emails) or (name and name in existing_names):
-                    skipped_count += 1
-                    msg = f"Skipping duplicate: {attributes['cn']}"
+                status, msg = _process_and_add_contact(
+                    attributes, existing_names, existing_emails, base, app.config, user_id
+                )
+                if status == "imported":
+                    imported_count += 1
                 else:
-                    attributes[app.config["LDAP_OWNER_ATTRIBUTE"]] = str(user_id)
-                    uid = str(uuid.uuid4())
-                    attributes["uid"] = uid
-                    new_dn = f"uid={uid},{base}"
-                    if add_ldap_entry(new_dn, object_classes, {k: v for k, v in attributes.items() if v}):
-                        imported_count += 1
-                        msg = f"Successfully imported: {attributes['cn']}"
-                    else:
-                        msg = f"Failed to import: {attributes['cn']}"
+                    skipped_count += 1
+
             payload = {"status": "progress", "current": i + 1, "total": total, "message": msg}
             yield f"data: {json.dumps(payload)}\n\n"
 
@@ -289,3 +289,4 @@ def generate_import_stream(token, app, user_id, privacy):  # pylint: disable=too
 
     final_msg = f"Import complete. Added {imported_count}, skipped {skipped_count}."
     yield f"data: {json.dumps({'status': 'complete', 'message': final_msg})}\n\n"
+# end file

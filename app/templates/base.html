@@ -1,3 +1,4 @@
+# filename: app/templates/base.html
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!DOCTYPE html>
 <html lang="en">
@@ -39,14 +40,23 @@
                     </a>
                     {% endif %}
 
-                    {% block navbar_buttons %}{% endblock %}
-
-                    <!-- Import from Google Button -->
-                    {% if config.ENABLE_GOOGLE_CONTACTS_IMPORT and (current_user.is_admin or current_user.is_editor) %}
-                    <a href="{{ url_for('main.import_google_contacts') }}" class="btn btn-outline-light me-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Import from Google">
-                        <i class="bi bi-google"></i>
-                    </a>
+                    <!-- Import Dropdown -->
+                    {% if (config.ENABLE_GOOGLE_CONTACTS_IMPORT or config.ENABLE_VCARD_IMPORT) and (current_user.is_admin or current_user.is_editor) %}
+                    <div class="dropdown me-2">
+                      <button class="btn btn-outline-light dropdown-toggle" type="button" id="importDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Import Contacts">
+                        <i class="bi bi-box-arrow-in-down"></i>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="importDropdown">
+                        {% if config.ENABLE_GOOGLE_CONTACTS_IMPORT %}
+                        <li><a class="dropdown-item" href="{{ url_for('main.import_google_contacts') }}"><i class="bi bi-google me-2"></i> From Google</a></li>
+                        {% endif %}
+                        {% if config.ENABLE_VCARD_IMPORT %}
+                        <li><a class="dropdown-item" href="{{ url_for('main.import_vcard') }}"><i class="bi bi-person-vcard me-2"></i> From vCard File</a></li>
+                        {% endif %}
+                      </ul>
+                    </div>
                     {% endif %}
+
 
                     <!-- Spacer -->
                     <div class="me-auto"></div>
@@ -109,3 +119,4 @@
     </script>
 </body>
 </html>
+# end file

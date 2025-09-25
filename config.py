@@ -78,6 +78,7 @@ class Config:
         "1",
         "t",
     )
+    ENABLE_VCARD_IMPORT = os.environ.get("ENABLE_VCARD_IMPORT", "False").lower() in ("true", "1", "t")
     LDAP_OWNER_ATTRIBUTE = os.environ.get("LDAP_OWNER_ATTRIBUTE", "employeeNumber")
 
     # Ensure the owner attribute is always fetched from LDAP for filtering

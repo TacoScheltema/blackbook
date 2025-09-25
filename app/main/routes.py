@@ -13,16 +13,19 @@
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Version: 0.37
+# Version: 0.38
 
 import base64
 import time
 import uuid
+from datetime import datetime, timezone
 
+import vobject
 import requests
 from authlib.integrations.base_client.errors import OAuthError
 from flask import Response, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
 from requests.exceptions import RequestException
 
 from app import oauth, scheduler
@@ -479,6 +482,29 @@ def import_stream():
     app = current_app._get_current_object()  # pylint: disable=protected-access
     privacy = session.pop("import_privacy", "public")
     return Response(generate_import_stream(token, app, current_user.id, privacy), mimetype="text/event-stream")
+
+
+@bp.route("/import/vcard", methods=["GET", "POST"])
+@login_required
+@editor_required
+def import_vcard():
+    """Handles the vCard file upload and import process."""
+    if request.method == "POST":
+        if "vcard_file" not in request.files:
+            flash("No file part", "warning")
+            return redirect(request.url)
+        file = request.files["vcard_file"]
+        if file.filename == "":
+            flash("No selected file", "warning")
+            return redirect(request.url)
+        if file and file.filename.endswith(".vcf"):
+            privacy = request.form.get("privacy", "public")
+            content = file.read().decode("utf-8")
+            # Process the vCard content here
+            flash(f"vCard file uploaded. Privacy: {privacy}", "success")
+            return redirect(url_for("main.index"))
+
+    return render_template("import_vcard.html", title="Import from vCard")
 
 
 @bp.route("/person/toggle_privacy/<b64_dn>", methods=["POST"])
