@@ -7,7 +7,7 @@ The application allows users to browse, search, add, edit and view contact and c
 ## License
 
 Licensed under the GNU General Public License v3.0 (GPLv3).
-See the LICENSE file for details.
+See the [LICENSE](LICENSE) file for details.
 
 ## Author
 
