@@ -85,47 +85,8 @@ This application uses **Flask-Migrate** to manage database schema changes.
 
 ### **Step 4.1: First-Time Setup**
 
-After you've configured your `.env` file, you need to initialize the database.
-**Run these commands only once** for the initial setup.
-
-1. Ensure your virtual environment is activated
-2. Initialize the migration repository (creates a 'migrations' folder)
-    ```shell 
-    flask db init
-    ```
-3. Create the first migration script based on the current models
-    ```shell 
-    flask db migrate -m "Initial migration."
-    ```
-4. Apply the migration to create the database and its tables
-    ```shell
-    flask db upgrade
-    ```
-
-### **Step 4.2: Creating the Default Admin User**
-
-After initializing the database, you need to create the default admin user. A helper command is available for this.
-
-1. Ensure your virtual environment is activated
-2. This will create the user `admin` with the password `changeme`.
-    ```shell
-    flask create-admin
-    ```
-
-### **Step 4.3: Handling Future Schema Updates**
-
-If you pull new code that includes changes to the database models (e.g., a new column is added), you **do not** delete
-the database. Instead, you run the following commands to safely upgrade it:
-
-1. Ensure your virtual environment is activated
-2. Generate a new migration script that detects the changes
-   ```shell
-   flask db migrate -m "A short description of the changes."
-   ```
-3. Apply the changes to your database
-   ```shell
-   flask db upgrade
-   ```
+After you've configured your `.env` file, the application will create the database automatically when it's first started.
+If `ENABLE_LOCAL_LOGIN` is set to `True`, a user `admin` will be created with the initial password provided in `ADMIN_INITIAL_PASS`
 
 ## **5. Running the Application**
 
@@ -152,6 +113,6 @@ gunicorn --bind 0.0.0.0:8000 wsgi:application
 If you have `ENABLE_LOCAL_LOGIN` set to True, you can now log in with the default administrator account.
 
 * **Username:** `admin`
-* **Password:** `changeme`
+* **Password:** see `ADMIN_INITIAL_PASS` in `.env`
 
 You will be **forced to reset your password** immediately after your first login.
