@@ -12,15 +12,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Blackbook.  If not, see <https://www.gnu.org/licenses/>.
-
-#
-# Author: Taco Scheltema https://github.com/TacoScheltema/blackbook
-#
-
 #
 # This is the entry point for a WSGI server like Gunicorn or uWSGI.
 # Example usage: gunicorn --bind 0.0.0.0:8000 wsgi:application
+import os
+
 import click
+from flask_migrate import upgrade
 
 from app import create_app, db
 from app.models import User
@@ -28,28 +26,81 @@ from app.models import User
 application = create_app()
 
 
-@application.cli.command("create-admin")
-def create_admin():
-    """Creates the default admin user."""
-    if application.config["ENABLE_LOCAL_LOGIN"]:
-        if User.query.filter_by(username="admin").first():
-            print("Admin user already exists.")
+# --- Database Auto-Migration ---
+def run_migrations():
+    """
+    Automatically applies database migrations on startup.
+    """
+    # Check if the migrations directory exists
+    migrations_dir = os.path.join(os.path.dirname(__file__), "migrations")
+
+    if os.path.exists(migrations_dir):
+        print("----------------------------------------------------------------")
+        print("Checking for database migrations...")
+        with application.app_context():
+            try:
+                # This is equivalent to running 'flask db upgrade'
+                upgrade()
+                print("Database schema is up to date.")
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                print(f"Error during database migration: {e}")
+                print("If this is a fresh install, ensure you have run 'flask db init' locally first.")
+        print("----------------------------------------------------------------")
+    else:
+        print("WARNING: 'migrations' directory not found. Skipping auto-migration.")
+
+
+def ensure_default_admin():
+    """
+    Automatically creates the default admin user on startup if:
+    1. ENABLE_LOCAL_LOGIN is True
+    2. The 'admin' user does not already exist.
+    """
+    with application.app_context():
+        # 1. Check config
+        if not application.config.get("ENABLE_LOCAL_LOGIN"):
             return
 
+        # 2. Check if admin exists
+        if User.query.filter_by(username="admin").first():
+            return
+
+        print("----------------------------------------------------------------")
         print("Creating default admin user...")
-        admin_user = User(
-            username="admin",
-            email="",
-            auth_source="local",
-            password_reset_required=True,
-            is_admin=True,  # The default admin is always an admin
-        )
-        admin_user.set_password("changeme")
-        db.session.add(admin_user)
-        db.session.commit()
-        print("Default admin user created with password 'changeme'. Please login to reset.")
-    else:
-        print("Local login is disabled. Cannot create admin user.")
+
+        # Get admin credentials from environment variables, falling back to defaults if not set
+        admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
+        admin_password = os.environ.get("ADMIN_INITIAL_PASS", "changeme")
+
+        try:
+            admin_user = User(
+                username="admin",
+                email=admin_email,
+                auth_source="local",
+                password_reset_required=True,
+                is_admin=True,  # The default admin is always an admin
+            )
+            admin_user.set_password(admin_password)
+            db.session.add(admin_user)
+            db.session.commit()
+            print("Default admin user created with the initial password provided. Please login to reset.")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            print(f"Error creating default admin user: {e}")
+
+        print("----------------------------------------------------------------")
+
+
+# --- Startup Sequence ---
+# 1. Apply DB Migrations
+run_migrations()
+# 2. Ensure Admin User Exists
+ensure_default_admin()
+
+
+@application.cli.command("create-admin")
+def create_admin():
+    """Creates the default admin user (CLI Wrapper)."""
+    ensure_default_admin()
 
 
 @application.cli.command("grant-admin")
